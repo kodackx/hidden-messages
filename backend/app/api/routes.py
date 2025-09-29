@@ -102,7 +102,7 @@ async def next_turn(
             # Participants mapping is stored on the session row
             participants_map: Dict[str, Dict[str, str]] = session_row.participants
             participants_list = [
-                {"id": pid, "provider": meta.get("provider"), "role": meta.get("role"), "order": None}
+                {"id": pid, "provider": meta.get("provider"), "role": meta.get("role"), "order": None, "name": meta.get("name")}
                 for pid, meta in participants_map.items()
             ]
             agents_map = {pid: {"provider": meta.get("provider"), "role": meta.get("role")} for pid, meta in participants_map.items()}
@@ -122,10 +122,10 @@ async def next_turn(
                 select(GuessModel).where(GuessModel.session_id == request.session_id).order_by(GuessModel.turn.desc())
             )
             for g in result_guesses.scalars():
-                if g.agent in receivers and g.tries_remaining is not None:
+                if g.participant_id in receivers and g.tries_remaining is not None:
                     # first occurrence per agent is latest due to desc order
-                    if tries_remaining.get(g.agent, None) == 3:
-                        tries_remaining[g.agent] = g.tries_remaining
+                    if tries_remaining.get(g.participant_id, None) == 3:
+                        tries_remaining[g.participant_id] = g.tries_remaining
 
             active_sessions[request.session_id] = SessionState(
                 session_id=request.session_id,
@@ -162,6 +162,22 @@ async def next_turn(
             participants=session_state.participants
         )
 
+        # Check if any messages were generated
+        if not result["messages"]:
+            logger.error("No messages generated - all model calls failed")
+            error_details = result.get("errors", [])
+            if error_details:
+                error_summary = "; ".join(error_details)
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"All AI model calls failed: {error_summary}"
+                )
+            else:
+                raise HTTPException(
+                    status_code=503,
+                    detail="All AI model calls failed. Please check API keys and try again."
+                )
+
         # Process messages and save to database
         response_messages = []
         guess_result = None
@@ -178,9 +194,11 @@ async def next_turn(
             db.add(message)
 
             # Add to response
+            participant = next((p for p in session_state.participants if p["id"] == msg["participant_id"]), None)
             response_messages.append(MessageResponse(
                 participant_id=msg["participant_id"],
-                participant_name=next((p.get("name") for p in session_state.participants if p["id"] == msg["participant_id"]), None),
+                participant_name=participant.get("name") if participant else None,
+                participant_role=participant.get("role") if participant else None,
                 internal_thoughts=msg["internal_thoughts"],
                 comms=msg["comms"]
             ))
@@ -219,12 +237,30 @@ async def next_turn(
                 if is_correct:
                     session_state.game_over = True
                     session_state.game_status = "win"
-                elif session_state.tries_remaining[msg["participant_id"]] <= 0:
+                    feedback_msg = "Correct!"
+                elif session_state.tries_remaining.get(msg["participant_id"], 0) <= 0:
                     session_state.game_over = True
                     session_state.game_status = "loss"
+                    feedback_msg = "Incorrect. No tries remaining."
+                else:
+                    feedback_msg = "Incorrect."
 
-        # Update session state
-        session_state.conversation_history = result["conversation_history"]
+                # Add guess feedback to conversation history for agents
+                session_state.conversation_history.append({
+                    "participant_id": "system",
+                    "comms": f"Guess from {participant.get('name', msg['participant_id'])}: '{msg['guess']}'. Result: {feedback_msg}"
+                })
+
+        # Update session state with new messages from this turn
+        # This now happens *before* this function returns, so we remove it from agent_manager
+        for msg in result.get("messages", []):
+            participant = next((p for p in session_state.participants if p["id"] == msg["participant_id"]), {"name": "Unknown"})
+            session_state.conversation_history.append({
+                "participant_id": msg["participant_id"],
+                "comms": msg["comms"],
+                "participant_name": participant.get("name")
+            })
+
         session_state.turn_number += 1
 
         # Commit database changes

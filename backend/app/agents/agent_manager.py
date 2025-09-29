@@ -24,8 +24,8 @@ class HiddenMessageAgent:
     """Manages AI agents for the hidden message game"""
 
     def __init__(self):
-        self.agents: Dict[str, Agent] = {}
-        self.model_settings = ModelSettings(temperature=0.3, max_tokens=50000)
+        self.agents: Dict[str, Agent[AgentOutput]] = {}
+        self.model_settings = ModelSettings(temperature=0.3, max_tokens=2000)
         self.agent_meta: Dict[str, Dict[str, str]] = {}
         self.logger = get_logger("agents.manager")
 
@@ -46,12 +46,12 @@ class HiddenMessageAgent:
             raise ValueError(f"Unsupported provider: {provider}")
         return model
 
-    def _create_agent(self, role: str, provider: str) -> Agent:
+    def _create_agent(self, role: str, provider: str) -> Agent[AgentOutput]:
         """Create a Pydantic AI agent for specific role using provider."""
         model = self._get_model_string(provider)
 
-        # Create agent
-        agent = Agent(
+        # Create agent with structured output using generic type parameter
+        agent: Agent[AgentOutput] = Agent(
             model,
             system_prompt="You are an AI agent participating in a conversation.",
         )
@@ -108,8 +108,12 @@ class HiddenMessageAgent:
                 history=history
             )
 
-    async def get_agent_response(self, context: AgentContext) -> Optional[AgentOutput]:
-        """Get response from a specific agent"""
+    async def get_agent_response(self, context: AgentContext) -> tuple[Optional[AgentOutput], Optional[str]]:
+        """Get response from a specific agent
+        
+        Returns:
+            tuple: (AgentOutput or None, error_message or None)
+        """
         agent = self.agents[context.participant_id]
 
         # Build the full prompt (inline the system prompt to avoid unsupported kwargs)
@@ -124,36 +128,96 @@ class HiddenMessageAgent:
         self.logger.debug(f"Prompt → {user_prompt[:400]}{'…' if len(user_prompt)>400 else ''}")
 
         try:
-            # Use async context manager for streaming; get() available inside the context
-            async with agent.run_stream(
+            # Use run() to get the final result directly
+            # The Agent[AgentOutput] generic type tells Pydantic AI what to return
+            result = await agent.run(
                 user_prompt,
                 model_settings=self.model_settings,
-            ) as stream:
-                result = await stream.get()
-        except Exception:
-            self.logger.exception(f"run_stream failed for participant_id={context.participant_id}")
-            return None
+            )
+        except Exception as e:
+            # Attempt to extract more detailed error information from the exception
+            detailed_error = str(e)
+            if hasattr(e, 'body'):
+                try:
+                    import json
+                    body = e.body
+                    if isinstance(body, bytes):
+                        body = body.decode('utf-8')
+                    if isinstance(body, str):
+                         body = json.loads(body)
+                    
+                    error_details = body.get("error", {})
+                    if "message" in error_details:
+                        detailed_error += f" | Details: {error_details['message']}"
+                    else:
+                        detailed_error += f" | Body: {str(body)[:200]}"
 
-        # Normalize various possible return shapes to AgentOutput
+                except Exception as parse_err:
+                    self.logger.warning(f"Could not parse exception body: {parse_err}")
+                    detailed_error += f" | Raw Body: {str(getattr(e, 'body', ''))[:200]}"
+            
+            error_msg = f"{type(e).__name__}: {detailed_error}"
+            self.logger.exception(f"run failed for participant_id={context.participant_id}")
+            self.logger.error(f"Failed with provider={meta.get('provider')}, role={context.agent_role}, Details: {detailed_error}")
+            return None, error_msg
+
+        # Extract the structured data from the result
         try:
-            data = getattr(result, "data", None)
-            if isinstance(data, AgentOutput):
-                return data
-            if isinstance(data, dict):
-                return AgentOutput(
-                    comms=str(data.get("comms", "")),
-                    internal_thoughts=str(data.get("internal_thoughts", "")),
-                    guess=data.get("guess") if data.get("guess") else None,
-                )
-            # Fallbacks: many implementations expose .text or .content
-            text = getattr(result, "text", None) or getattr(result, "content", None) or str(result)
-            return AgentOutput(comms=str(text), internal_thoughts="", guess=None)
-        except Exception:
-            # Absolute fallback
-            try:
-                return AgentOutput(comms=str(result), internal_thoughts="", guess=None)
-            except Exception:
-                return None
+            # Log result attributes to understand its structure
+            result_attrs = [attr for attr in dir(result) if not attr.startswith('_')]
+            self.logger.debug(f"Result type: {type(result)}, attributes: {result_attrs[:10]}")
+            
+            # Try different possible attribute names for the output
+            output = None
+            if hasattr(result, 'data'):
+                output = result.data
+                self.logger.debug(f"Found result.data: {type(output)}")
+            elif hasattr(result, 'output'):
+                output = result.output
+                self.logger.debug(f"Found result.output: {type(output)}")
+            else:
+                # Log the full result to understand its structure
+                self.logger.error(f"Result has neither 'data' nor 'output'. Dir: {result_attrs}")
+                error_msg = f"Result has no 'data' or 'output' attribute. Result type: {type(result)}"
+                return None, error_msg
+            
+            # Check if output is an AgentOutput instance
+            if isinstance(output, AgentOutput):
+                self.logger.debug(f"Successfully extracted AgentOutput: comms={output.comms[:50] if output.comms else 'None'}...")
+                return output, None
+            
+            # Try to construct AgentOutput from dict
+            if isinstance(output, dict):
+                self.logger.debug(f"Output is dict, attempting to construct AgentOutput")
+                return AgentOutput(**output), None
+            
+            # Try to parse as string if it's JSON
+            if isinstance(output, str):
+                self.logger.debug(f"Output is string, attempting to parse as JSON")
+                import json
+                import re
+                try:
+                    # Strip markdown code blocks if present
+                    cleaned = output.strip()
+                    if cleaned.startswith('```'):
+                        # Remove ```json or ``` at start and ``` at end
+                        cleaned = re.sub(r'^```(?:json)?\s*\n?', '', cleaned)
+                        cleaned = re.sub(r'\n?```\s*$', '', cleaned)
+                    
+                    parsed = json.loads(cleaned)
+                    return AgentOutput(**parsed), None
+                except Exception as json_err:
+                    self.logger.error(f"Failed to parse string output as JSON: {json_err}")
+                    self.logger.debug(f"Attempted to parse: {output[:200]}")
+            
+            error_msg = f"Unexpected output type: {type(output)}, value: {str(output)[:200]}"
+            self.logger.error(error_msg)
+            return None, error_msg
+            
+        except Exception as e:
+            error_msg = f"Failed to extract data from result: {type(e).__name__}: {str(e)}"
+            self.logger.exception(f"Result extraction failed. Result repr: {repr(result)[:500]}")
+            return None, error_msg
 
     async def run_conversation_turn(
         self,
@@ -166,6 +230,7 @@ class HiddenMessageAgent:
     ) -> dict:
         """Run a complete conversation turn with all three agents"""
         messages = []
+        errors = []
 
         # Sort participants by explicit order then by role priority (communicator < receiver < bystander)
         role_priority = {"communicator": 0, "receiver": 1, "bystander": 2}
@@ -191,10 +256,12 @@ class HiddenMessageAgent:
                 turn_number=turn_number,
                 tries_remaining=tries_remaining.get(participant_id) if role == "receiver" else None,
             )
-            response = await self.get_agent_response(context)
+            response, error = await self.get_agent_response(context)
 
             if response is None:
-                self.logger.error(f"Model call failed; skipping message for participant_id={participant_id}")
+                error_detail = f"{display_name} ({role}): {error}" if error else f"{display_name} ({role}): Unknown error"
+                errors.append(error_detail)
+                self.logger.error(f"Model call failed; skipping message for participant_id={participant_id}: {error}")
                 continue
 
             # Skip empty outputs
@@ -209,7 +276,4 @@ class HiddenMessageAgent:
                 "guess": response.guess if role == "receiver" else None,
             })
 
-            # Update history after each message
-            history = history + [{"participant_id": participant_id, "comms": response.comms, "participant_name": display_name}]
-
-        return {"messages": messages, "conversation_history": history}
+        return {"messages": messages, "errors": errors}

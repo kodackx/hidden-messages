@@ -40,6 +40,7 @@ class NextTurnRequest(BaseModel):
 class MessageResponse(BaseModel):
     participant_id: str
     participant_name: Optional[str] = None
+    participant_role: Optional[str] = None
     internal_thoughts: str
     comms: str
 

@@ -1,12 +1,17 @@
 # Hidden Channels Makefile
 # Works with make (if installed) or can be run directly with commands
 
-.PHONY: help install dev up down build clean test migrate shell-api shell-db logs restart fresh
+PYTHON_VERSION = 3.12
+
+.PHONY: help install dev up down build clean test migrate migrate-create \
+        shell-api shell-db logs logs-api logs-db restart fresh health \
+        format lint test-api test-session env run-backend
 
 # Default target
 help:
 	@echo "Available commands:"
-	@echo "  make install    - Install backend dependencies"
+	@echo "  make install    - Install Python $(PYTHON_VERSION) (if needed) and dependencies via uv"
+	@echo "  make run-backend- Run the backend locally using uv"
 	@echo "  make dev        - Start development servers (Docker)"
 	@echo "  make up         - Start all services (Docker)"
 	@echo "  make down       - Stop all services"
@@ -22,7 +27,15 @@ help:
 
 # Install dependencies locally
 install:
-	cd backend && pip install uv && uv venv && uv pip install -e .[dev]
+	@echo "Ensuring Python $(PYTHON_VERSION) is installed via uv..."
+	uv python install $(PYTHON_VERSION)
+	@echo "Creating virtual environment with Python $(PYTHON_VERSION) and syncing dependencies..."
+	cd backend && uv venv --python $(PYTHON_VERSION) && uv sync --extra dev
+
+# Run backend locally
+run-backend:
+	@test -d "backend/.venv" || (echo "Virtual environment not found. Please run 'make install' first." && exit 1)
+	cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
 
 # Start development environment
 dev:

@@ -40,7 +40,7 @@ GOOGLE_API_KEY=...        # optional
 docker compose up --build
 ```
 
-3) Visit the API at `http://localhost:8000`. Health check:
+3) Visit the API at `http://localhost:8000`. Health check:  
 ```bash
 curl http://localhost:8000/api/health
 ```
