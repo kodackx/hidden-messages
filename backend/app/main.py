@@ -2,13 +2,16 @@ from fastapi import FastAPI
 import logging
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 from .api import router
 from .models import Base, engine
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from .env.development for local dev
+# In Docker, environment variables are already set by docker-compose
+env_file = Path(__file__).parent.parent / ".env.development"
+load_dotenv(env_file)
 
 # Honor LOG_LEVEL but rely on Uvicorn --log-config for format/colors
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG").upper()
@@ -38,8 +41,11 @@ app.include_router(router, prefix="/api")
 async def startup_event():
     """Initialize database on startup"""
     _log = logging.getLogger("app.startup")
+    _log.info("hello world (begin logging levels test)")
     _log.debug("hello world (debug)")
     _log.warning("hello world (warning)")
+    _log.error("hello world (error)")
+    _log.critical("hello world (critical)")
     async with engine.begin() as conn:
         # Create tables if they don't exist
         await conn.run_sync(Base.metadata.create_all)
@@ -55,4 +61,10 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_config="log_conf.yaml",
+    )

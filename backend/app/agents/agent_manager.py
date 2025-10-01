@@ -127,6 +127,10 @@ class HiddenMessageAgent:
         )
         self.logger.debug(f"Prompt → {user_prompt[:400]}{'…' if len(user_prompt)>400 else ''}")
 
+        # Track timing for performance monitoring
+        import time
+        start_time = time.time()
+
         try:
             # Use run() to get the final result directly
             # The Agent[AgentOutput] generic type tells Pydantic AI what to return
@@ -134,31 +138,95 @@ class HiddenMessageAgent:
                 user_prompt,
                 model_settings=self.model_settings,
             )
+            elapsed_ms = int((time.time() - start_time) * 1000)
+            
+            # Log usage metrics if available
+            usage_info = []
+            if hasattr(result, 'usage') and result.usage:
+                usage = result.usage()
+                if hasattr(usage, 'total_tokens'):
+                    usage_info.append(f"total_tokens={usage.total_tokens}")
+                if hasattr(usage, 'input_tokens'):
+                    usage_info.append(f"input_tokens={usage.input_tokens}")
+                if hasattr(usage, 'output_tokens'):
+                    usage_info.append(f"output_tokens={usage.output_tokens}")
+            
+            usage_str = f" ({', '.join(usage_info)})" if usage_info else ""
+            self.logger.debug(f"Model call completed in {elapsed_ms}ms for participant_id={context.participant_id}{usage_str}")
         except Exception as e:
-            # Attempt to extract more detailed error information from the exception
-            detailed_error = str(e)
-            if hasattr(e, 'body'):
+            provider = meta.get("provider")
+            try:
+                model_name = self._get_model_string(provider) if provider else None
+            except Exception:
+                model_name = None
+
+            status_code = getattr(e, "status_code", None)
+            body_obj = getattr(e, "body", None)
+            error_message_detail = None
+            body_text = None
+            if body_obj is not None:
                 try:
                     import json
-                    body = e.body
-                    if isinstance(body, bytes):
-                        body = body.decode('utf-8')
-                    if isinstance(body, str):
-                         body = json.loads(body)
-                    
-                    error_details = body.get("error", {})
-                    if "message" in error_details:
-                        detailed_error += f" | Details: {error_details['message']}"
-                    else:
-                        detailed_error += f" | Body: {str(body)[:200]}"
 
-                except Exception as parse_err:
-                    self.logger.warning(f"Could not parse exception body: {parse_err}")
-                    detailed_error += f" | Raw Body: {str(getattr(e, 'body', ''))[:200]}"
-            
-            error_msg = f"{type(e).__name__}: {detailed_error}"
-            self.logger.exception(f"run failed for participant_id={context.participant_id}")
-            self.logger.error(f"Failed with provider={meta.get('provider')}, role={context.agent_role}, Details: {detailed_error}")
+                    if isinstance(body_obj, bytes):
+                        body_obj = body_obj.decode("utf-8", errors="replace")
+                    if isinstance(body_obj, str):
+                        body_obj = json.loads(body_obj)
+
+                    if isinstance(body_obj, dict):
+                        body_text = json.dumps(body_obj)[:500]
+                    else:
+                        body_text = str(body_obj)[:500]
+                except Exception:
+                    body_text = str(body_obj)[:500]
+
+            request_id = None
+            error_code = None
+            error_type = None
+            if hasattr(e, "response"):
+                response = getattr(e, "response")
+                headers = getattr(response, "headers", {}) or {}
+                request_id = headers.get("x-request-id")
+            if hasattr(e, "body") and isinstance(body_obj, dict):
+                error_detail = body_obj.get("error") or {}
+                error_code = error_detail.get("code")
+                error_type = error_detail.get("type")
+                error_message_detail = error_detail.get("message") or error_detail.get("error_message")
+
+            cause_chain = []
+            cause = e.__cause__
+            while cause and len(cause_chain) < 2:
+                cause_chain.append(f"{type(cause).__name__}: {cause}")
+                cause = cause.__cause__
+
+            context_bits = [
+                f"provider={provider}" if provider else None,
+                f"model={model_name}" if model_name else None,
+                f"role={context.agent_role}",
+                f"participant_id={context.participant_id}",
+                f"status_code={status_code}" if status_code is not None else None,
+                f"request_id={request_id}" if request_id else None,
+                f"error_code={error_code}" if error_code else None,
+                f"error_type={error_type}" if error_type else None,
+                f"error_message={error_message_detail}" if error_message_detail else None,
+            ]
+            context_bits = [bit for bit in context_bits if bit]
+
+            detailed_error = str(e)
+            if body_text:
+                detailed_error += f" | body={body_text}"
+            if cause_chain:
+                detailed_error += f" | cause={' | '.join(cause_chain)}"
+
+            summary = ", ".join(context_bits) if context_bits else ""
+            error_msg = f"{type(e).__name__}: {detailed_error}" + (f" | {summary}" if summary else "")
+
+            self.logger.exception(
+                "run failed for participant_id=%s; diagnostics=%s",
+                context.participant_id,
+                summary or detailed_error,
+            )
+            return None, error_msg
             return None, error_msg
 
         # Extract the structured data from the result
@@ -181,9 +249,22 @@ class HiddenMessageAgent:
                 error_msg = f"Result has no 'data' or 'output' attribute. Result type: {type(result)}"
                 return None, error_msg
             
+            # Log the raw output for debugging
+            self.logger.debug(f"Raw output before parsing: {str(output)[:500]}{'...' if len(str(output))>500 else ''}")
+            
             # Check if output is an AgentOutput instance
             if isinstance(output, AgentOutput):
-                self.logger.debug(f"Successfully extracted AgentOutput: comms={output.comms[:50] if output.comms else 'None'}...")
+                # Log detailed field values
+                comms_preview = output.comms[:100] if output.comms else None
+                thoughts_preview = output.internal_thoughts[:100] if output.internal_thoughts else None
+                self.logger.debug(
+                    f"✓ Successfully extracted AgentOutput for participant_id={context.participant_id}: "
+                    f"comms={'[' + str(len(output.comms)) + ' chars]' if output.comms else 'None'}, "
+                    f"internal_thoughts={'[' + str(len(output.internal_thoughts)) + ' chars]' if output.internal_thoughts else 'None'}, "
+                    f"guess={output.guess if output.guess else 'None'}"
+                )
+                self.logger.debug(f"  └─ comms preview: {repr(comms_preview)}")
+                self.logger.debug(f"  └─ thoughts preview: {repr(thoughts_preview)}")
                 return output, None
             
             # Try to construct AgentOutput from dict
@@ -264,11 +345,25 @@ class HiddenMessageAgent:
                 self.logger.error(f"Model call failed; skipping message for participant_id={participant_id}: {error}")
                 continue
 
-            # Skip empty outputs
+            # Skip empty outputs - log detailed information about what's missing
             if not (response.comms or response.internal_thoughts or response.guess):
-                self.logger.warning(f"Empty output; skipping message for participant_id={participant_id}")
+                self.logger.error(
+                    f"⚠ EMPTY RESPONSE detected for participant_id={participant_id} ({display_name}, {role}): "
+                    f"comms={repr(response.comms)}, "
+                    f"internal_thoughts={repr(response.internal_thoughts)}, "
+                    f"guess={repr(response.guess)}"
+                )
+                errors.append(f"{display_name} ({role}): Empty response - all fields are empty or None")
                 continue
 
+            # Log successful message creation
+            self.logger.debug(
+                f"✓ Message created for participant_id={participant_id} ({display_name}, {role}): "
+                f"comms_len={len(response.comms) if response.comms else 0}, "
+                f"thoughts_len={len(response.internal_thoughts) if response.internal_thoughts else 0}, "
+                f"has_guess={bool(response.guess)}"
+            )
+            
             messages.append({
                 "participant_id": participant_id,
                 "internal_thoughts": response.internal_thoughts,
@@ -276,4 +371,12 @@ class HiddenMessageAgent:
                 "guess": response.guess if role == "receiver" else None,
             })
 
+        # Log summary of the conversation turn
+        self.logger.info(
+            f"Conversation turn {turn_number} completed: "
+            f"{len(messages)} messages generated, {len(errors)} errors"
+        )
+        if errors:
+            self.logger.warning(f"Errors in turn {turn_number}: {errors}")
+        
         return {"messages": messages, "errors": errors}

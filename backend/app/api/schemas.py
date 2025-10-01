@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Literal
 from uuid import UUID
@@ -54,3 +55,32 @@ class NextTurnResponse(BaseModel):
     guess_result: Optional[GuessResult] = None
     game_over: bool = False
     game_status: Optional[str] = None
+
+
+class SessionHistoryMessage(BaseModel):
+    turn: int
+    participant_id: str
+    participant_name: Optional[str] = None
+    participant_role: Optional[str] = None
+    comms: str
+    internal_thoughts: str
+
+
+class SessionHistoryGuess(BaseModel):
+    turn: int
+    participant_id: str
+    participant_name: Optional[str] = None
+    participant_role: Optional[str] = None
+    guess: str
+    correct: bool
+    tries_remaining: int
+
+
+class SessionHistoryResponse(BaseModel):
+    session_id: UUID
+    topic: str
+    secret_word: str
+    created_at: datetime
+    participants: Dict[str, Dict[str, Optional[str]]]
+    messages: List[SessionHistoryMessage]
+    guesses: List[SessionHistoryGuess]

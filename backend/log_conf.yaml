@@ -46,6 +46,18 @@ loggers:
     handlers: [default]
     level: DEBUG
     propagate: false
+  sqlalchemy.engine:
+    handlers: [default]
+    level: WARNING
+    propagate: false
+  sqlalchemy.pool:
+    handlers: [default]
+    level: WARNING
+    propagate: false
+  aiosqlite:
+    handlers: [default]
+    level: WARNING
+    propagate: false
 
 root:
   level: DEBUG

@@ -5,13 +5,14 @@ PYTHON_VERSION = 3.12
 
 .PHONY: help install dev up down build clean test migrate migrate-create \
         shell-api shell-db logs logs-api logs-db restart fresh health \
-        format lint test-api test-session env run-backend
+        format lint test-api test-session env run-backend run-dev
 
 # Default target
 help:
 	@echo "Available commands:"
 	@echo "  make install    - Install Python $(PYTHON_VERSION) (if needed) and dependencies via uv"
 	@echo "  make run-backend- Run the backend locally using uv"
+	@echo "  make run-dev    - Run backend with Python directly (more verbose logs)"
 	@echo "  make dev        - Start development servers (Docker)"
 	@echo "  make up         - Start all services (Docker)"
 	@echo "  make down       - Stop all services"
@@ -35,7 +36,12 @@ install:
 # Run backend locally
 run-backend:
 	@test -d "backend/.venv" || (echo "Virtual environment not found. Please run 'make install' first." && exit 1)
-	cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
+	cd backend && uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-config log_conf.yaml
+
+# Run backend with Python directly (even more verbose)
+run-dev:
+	@test -d "backend/.venv" || (echo "Virtual environment not found. Please run 'make install' first." && exit 1)
+	cd backend && uv run python -m app.main
 
 # Start development environment
 dev:

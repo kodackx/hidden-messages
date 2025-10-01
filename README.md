@@ -28,11 +28,10 @@ This repo currently contains a FastAPI backend (see `backend/`) that orchestrate
 ## Quick start (Docker)
 Prereqs: Docker Desktop (or Docker Engine) and Compose.
 
-1) Create a `.env` file at the repo root (optional but recommended) with any API keys you plan to use:
-```
-OPENAI_API_KEY=...        # optional
-ANTHROPIC_API_KEY=...     # optional
-GOOGLE_API_KEY=...        # optional
+1) The Docker environment is pre-configured with PostgreSQL. Create `.env.docker` from the example:
+```bash
+cp .env.docker.example .env.docker
+# Edit .env.docker with your API keys
 ```
 
 2) Start services:
@@ -45,33 +44,45 @@ docker compose up --build
 curl http://localhost:8000/api/health
 ```
 
-Postgres runs at `localhost:5432` with credentials `app/app`, DB `hidden_messages` (see `docker-compose.yml`).
+Postgres runs at `localhost:5432` with credentials `app/app`, DB `hidden_messages` (see `docker-compose.yml` and `.env.docker`).
 
 ## Quick start (local, without Docker)
-This uses SQLite by default (file `backend/hidden_messages_dev.db`). To use Postgres locally, set `DATABASE_URL`.
+This uses SQLite by default (file `backend/hidden_messages_dev.db`). 
 
 ```bash
 cd backend
+
+# Set up environment
+cp .env.development.example .env.development
+# Edit .env.development with your API keys (SQLite is pre-configured)
+
+# Install dependencies
 pip install uv
 uv venv
 uv pip install -e .[dev]
 
-# Optional: set environment (for Postgres or API keys)
-# Powers SQLite by default if DATABASE_URL is unset
-
-# Create / upgrade schema
-uv run alembic upgrade head
-
-# Run dev server
+# Run dev server (tables are created automatically)
+# Option A: Using uvicorn
 uv run uvicorn app.main:app --reload
+
+# Option B: Using Python module
+uv run python -m app.main
 ```
 
 API will be at `http://localhost:8000`.
 
 ## Environment variables
+
+Environment files:
+- **`.env.docker`** (root) - Docker Compose (PostgreSQL, gitignored). Copy from `.env.docker.example`.
+- **`backend/.env.development`** - Local development (SQLite, gitignored). Copy from `backend/.env.development.example`.
+- **`.env.docker.example`** (root) - Template for Docker (tracked in git).
+- **`backend/.env.development.example`** - Template for local dev (tracked in git).
+
+Available variables:
 - `DATABASE_URL`: Database connection string. Examples:
-  - `postgresql+psycopg://app:app@localhost:5432/hidden_messages`
-  - `sqlite+aiosqlite:///./hidden_messages_dev.db` (default fallback)
+  - `postgresql+psycopg://app:app@localhost:5432/hidden_messages` (Docker)
+  - `sqlite+aiosqlite:///./hidden_messages_dev.db` (local dev, default)
 - `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`: Model provider keys.
 - `ALLOWED_ORIGINS`: CORS origins (default `http://localhost:5173`).
 - `TRIES_TOTAL`: Receiver guess attempts per agent (default `3`).

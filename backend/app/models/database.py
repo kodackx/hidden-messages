@@ -24,7 +24,9 @@ else:
 
 Base = declarative_base()
 
-engine = create_async_engine(ASYNC_DATABASE_URL, echo=True)
+# Set echo=False to reduce SQL query logging (can be enabled via env var for debugging)
+echo_sql = os.getenv("SQL_ECHO", "false").lower() == "true"
+engine = create_async_engine(ASYNC_DATABASE_URL, echo=echo_sql)
 SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 async def get_db():

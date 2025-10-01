@@ -64,9 +64,10 @@ def format_conversation_history(messages: list[dict]) -> str:
     formatted = []
     for msg in messages:
         if msg.get("participant_id") == "system":
-            formatted.append(f"System Note: {msg['comms']}")
+            formatted.append(f"[System]: {msg['comms']}")
         else:
+            # Use participant name (e.g. "Alpha") or fall back to ID
             name = msg.get('participant_name') or msg.get('participant_id')
-            formatted.append(f"Participant {name}: {msg['comms']}")
+            formatted.append(f"{name}: {msg['comms']}")
 
     return "\n".join(formatted)

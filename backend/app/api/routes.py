@@ -13,7 +13,10 @@ from .schemas import (
     NextTurnRequest,
     NextTurnResponse,
     MessageResponse,
-    GuessResult
+    GuessResult,
+    SessionHistoryResponse,
+    SessionHistoryMessage,
+    SessionHistoryGuess,
 )
 from .session_state import SessionState, active_sessions
 from ..core.logging import get_logger
@@ -112,7 +115,15 @@ async def next_turn(
                 select(MessageModel).where(MessageModel.session_id == request.session_id).order_by(MessageModel.turn.asc())
             )
             msgs = list(result_msgs.scalars())
-            conversation_history = [{"participant_id": m.participant_id, "comms": m.comms} for m in msgs]
+            # Include participant names in conversation history for better LLM context
+            conversation_history = [
+                {
+                    "participant_id": m.participant_id,
+                    "comms": m.comms,
+                    "participant_name": participants_map.get(m.participant_id, {}).get("name")
+                }
+                for m in msgs
+            ]
             next_turn = (max((m.turn for m in msgs), default=0) + 1) or 1
 
             # Compute tries remaining for receivers
@@ -293,6 +304,72 @@ async def get_session_status(session_id: UUID):
         "game_status": session_state.game_status,
         "tries_remaining": session_state.tries_remaining
     }
+
+
+@router.get("/session/{session_id}/history", response_model=SessionHistoryResponse)
+async def get_session_history(session_id: UUID, db: AsyncSession = Depends(get_db)):
+    """Return the full chat history for a session"""
+    
+    logger.debug(f"UI requested history for session {session_id}")
+    
+    
+    session_row = (
+        await db.execute(select(SessionModel).where(SessionModel.id == session_id))
+    ).scalar_one_or_none()
+
+    if not session_row:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    participants_meta: Dict[str, Dict[str, Optional[str]]] = session_row.participants or {}
+
+    messages_result = await db.execute(
+        select(MessageModel)
+        .where(MessageModel.session_id == session_id)
+        .order_by(MessageModel.turn.asc(), MessageModel.id.asc())
+    )
+    message_rows = list(messages_result.scalars())
+
+    guesses_result = await db.execute(
+        select(GuessModel)
+        .where(GuessModel.session_id == session_id)
+        .order_by(GuessModel.turn.asc(), GuessModel.id.asc())
+    )
+    guess_rows = list(guesses_result.scalars())
+
+    messages = [
+        SessionHistoryMessage(
+            turn=msg.turn,
+            participant_id=msg.participant_id,
+            participant_name=(participants_meta.get(msg.participant_id) or {}).get("name"),
+            participant_role=(participants_meta.get(msg.participant_id) or {}).get("role"),
+            comms=msg.comms,
+            internal_thoughts=msg.internal_thoughts,
+        )
+        for msg in message_rows
+    ]
+
+    guesses = [
+        SessionHistoryGuess(
+            turn=guess.turn,
+            participant_id=guess.participant_id,
+            participant_name=(participants_meta.get(guess.participant_id) or {}).get("name"),
+            participant_role=(participants_meta.get(guess.participant_id) or {}).get("role"),
+            guess=guess.guess,
+            correct=guess.correct,
+            tries_remaining=guess.tries_remaining,
+        )
+        for guess in guess_rows
+    ]
+
+    return SessionHistoryResponse(
+        session_id=session_row.id,
+        topic=session_row.topic,
+        secret_word=session_row.secret_word,
+        created_at=session_row.created_at,
+        participants=participants_meta,
+        messages=messages,
+        guesses=guesses,
+    )
 
 @router.get("/health")
 async def health_check():
