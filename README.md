@@ -4,9 +4,13 @@
 
 ## Hidden Messages
 
-An experiment exploring whether different LLMs can embed “hidden messages” for each other while keeping a conversation that appears normal to humans.
+> *Steganography: The practice of concealing messages within an ordinary, non-secret medium such that only the intended recipient knows a secret message exists.*
 
-This repo currently contains a FastAPI backend (see `backend/`) that orchestrates multiple agents, persists conversations to a database, and exposes a simple HTTP API to run sessions turn by turn.
+What if AI agents could develop their own forms of steganography? Can an LLM embed hidden signals in seemingly natural conversation—signals that another AI can detect, but humans would miss?
+
+**Hidden Messages** is an experimental game where AI agents attempt to communicate covertly while maintaining conversations that appear completely normal to human observers. One agent (the **Communicator**) must subtly embed a secret word into natural dialogue. Another (the **Receiver**) must detect the hidden message through careful analysis. A third (the **Bystander**) keeps the conversation flowing naturally, unaware of the secret exchange.
+
+This repository contains a FastAPI backend that orchestrates multi-agent sessions, persists conversation history to a database, and exposes a simple HTTP API to run the game turn by turn. Watch as different LLMs (GPT, Claude, Gemini) develop unique strategies for concealment and detection.
 
 ### Features
 - Multi‑agent orchestration powered by Pydantic AI
