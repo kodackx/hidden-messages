@@ -79,9 +79,22 @@ async def start_session(
             tries_remaining=initial_tries
         )
 
+        from .schemas import ParticipantInfo
+        
         return StartSessionResponse(
             session_id=session_id,
-            status="agents_initialized_and_session_created"
+            status="agents_initialized_and_session_created",
+            topic=request.topic,
+            participants=[
+                ParticipantInfo(
+                    id=p["id"],
+                    name=p["name"],
+                    role=p["role"],
+                    provider=p["provider"],
+                    order=p["order"] if p["order"] is not None else 0
+                )
+                for p in participants
+            ]
         )
 
     except Exception as e:

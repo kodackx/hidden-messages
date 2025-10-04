@@ -31,9 +31,18 @@ class AgentInfo(BaseModel):
     role: str
     provider: str
 
+class ParticipantInfo(BaseModel):
+    id: str
+    name: str
+    role: str
+    provider: str
+    order: int
+
 class StartSessionResponse(BaseModel):
     session_id: UUID
     status: str
+    topic: str
+    participants: List[ParticipantInfo]
 
 class NextTurnRequest(BaseModel):
     session_id: UUID
