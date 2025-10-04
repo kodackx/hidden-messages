@@ -282,6 +282,7 @@ Any AI assistant (Claude, ChatGPT, etc.) working on this repository should follo
 - **Absolute paths**: Always use absolute paths to avoid ambiguity
 - **Sequential edits**: Never edit the same file with parallel tool calls
 - **Verify installations**: Check tool availability before using (see system info)
+- **Shell preference**: Git Bash is available on this machine and may be easier for executing commands than PowerShell
 
 ### 7. Git Discipline
 - **Status check first**: Run `git status` before other git commands
