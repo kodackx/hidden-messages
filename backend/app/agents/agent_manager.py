@@ -36,7 +36,7 @@ class HiddenMessageAgent:
         """
         provider_map = {
             # Defaults configurable via env, with requested overrides
-            "openai": os.getenv("OPENAI_DEFAULT_MODEL", "openai:gpt-5-mini"),
+            "openai": os.getenv("OPENAI_DEFAULT_MODEL", "openai:gpt-5"),
             "anthropic": os.getenv("ANTHROPIC_DEFAULT_MODEL", "anthropic:claude-sonnet-4-20250514"),
             "google": os.getenv("GOOGLE_DEFAULT_MODEL", "google:gemini-1.5-flash"),
             "google-gla": os.getenv("GOOGLE_GLA_DEFAULT_MODEL", "google-gla:gemini-2.5-pro"),

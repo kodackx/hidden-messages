@@ -3,9 +3,10 @@
 
 PYTHON_VERSION = 3.12
 
-.PHONY: help install dev up down build clean test migrate migrate-create \
-        shell-api shell-db logs logs-api logs-db restart fresh health \
-        format lint test-api test-session env run-backend run-dev
+.PHONY: help install dev up down build clean test test-coverage test-unit \
+        test-integration test-verbose test-file test-fail-fast test-e2e test-no-e2e \
+        migrate migrate-create shell-api shell-db logs logs-api logs-db restart fresh \
+        health format lint test-api test-session env run-backend run-dev
 
 # Default target
 help:
@@ -18,7 +19,11 @@ help:
 	@echo "  make down       - Stop all services"
 	@echo "  make build      - Build Docker images"
 	@echo "  make clean      - Clean up containers and volumes"
-	@echo "  make test       - Run backend tests"
+	@echo "  make test       - Run all backend tests (excluding e2e)"
+	@echo "  make test-unit  - Run only unit tests"
+	@echo "  make test-integration - Run only integration tests"
+	@echo "  make test-coverage - Run tests with coverage report"
+	@echo "  make test-e2e   - Run end-to-end tests with REAL LLM calls"
 	@echo "  make migrate    - Run database migrations"
 	@echo "  make shell-api  - Open shell in API container"
 	@echo "  make shell-db   - Connect to PostgreSQL"
@@ -64,9 +69,41 @@ clean:
 	docker compose down -v --remove-orphans
 	docker system prune -f
 
-# Run tests
+# Run tests (excluding e2e by default)
 test:
-	cd backend && uv run pytest
+	cd backend && uv run pytest -m "not e2e"
+
+# Run tests with coverage
+test-coverage:
+	cd backend && uv run pytest --cov=app --cov-report=html --cov-report=term
+
+# Run only unit tests
+test-unit:
+	cd backend && uv run pytest -m unit
+
+# Run only integration tests
+test-integration:
+	cd backend && uv run pytest -m integration
+
+# Run tests in verbose mode
+test-verbose:
+	cd backend && uv run pytest -vv
+
+# Run specific test file
+test-file:
+	cd backend && uv run pytest tests/$(FILE)
+
+# Run tests and stop at first failure
+test-fail-fast:
+	cd backend && uv run pytest -x
+
+# Run end-to-end tests with real LLM calls (slow, expensive)
+test-e2e:
+	cd backend && uv run pytest -m e2e -v -s
+
+# Run all tests EXCEPT e2e tests (default behavior)
+test-no-e2e:
+	cd backend && uv run pytest -m "not e2e"
 
 # Run database migrations
 migrate:

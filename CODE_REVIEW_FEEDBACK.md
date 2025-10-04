@@ -215,7 +215,7 @@ async def test_max_tries_exceeded(db_session, mock_llm_responses):
 **Problem:**
 ```python
 provider_map = {
-    "openai": os.getenv("OPENAI_DEFAULT_MODEL", "openai:gpt-5-mini"),  # gpt-5-mini doesn't exist yet
+    "openai": os.getenv("OPENAI_DEFAULT_MODEL", "openai:gpt-5"), 
     "anthropic": os.getenv("ANTHROPIC_DEFAULT_MODEL", "anthropic:claude-sonnet-4-20250514"),
     # ...
 }
@@ -532,7 +532,7 @@ Experiment with:
 This is a solid experimental project with good fundamentals. The architecture is sound, the code is generally clean, and the use of modern Python tools shows good judgment. The main gaps are around testing, error handling robustness, and production-readiness concerns.
 
 **Recommended Next Steps:**
-1. Fix the critical model name issue (`gpt-5-mini` → `gpt-4o-mini`)
+1. Fix the critical model name issue (`gpt-5-mini` → `gpt-4o-mini`) (NOT TRUE, IT LAUNCHED RECENTLY)
 2. Add a basic test suite covering the happy path
 3. Improve agent response parsing with JSON repair
 4. Add session hydration tests to verify state management works
