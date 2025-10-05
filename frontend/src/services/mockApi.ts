@@ -5,6 +5,7 @@ import type {
   NextTurnResponse,
   SessionHistoryResponse,
   SessionStatusResponse,
+  SessionListResponse,
 } from '../types/api.types';
 
 // Mock session state
@@ -278,10 +279,30 @@ export class MockApiClient {
 
     return {
       session_id: mockSessionState.sessionId,
+      topic: mockSessionState.topic,
       turn_number: mockSessionState.turnNumber,
       game_over: mockSessionState.gameOver,
       game_status: mockSessionState.gameStatus,
       tries_remaining: receiverId ? { [receiverId]: 3 - mockSessionState.guessAttempts } : {},
+      participants: mockSessionState.participants,
+    };
+  }
+
+  async listSessions(): Promise<SessionListResponse> {
+    await delay(400);
+
+    // Return current mock session as the only session
+    return {
+      sessions: [
+        {
+          session_id: mockSessionState.sessionId,
+          topic: mockSessionState.topic,
+          created_at: new Date().toISOString(),
+          message_count: mockSessionState.messages.length,
+          game_over: mockSessionState.gameOver,
+          game_status: mockSessionState.gameStatus,
+        },
+      ],
     };
   }
 

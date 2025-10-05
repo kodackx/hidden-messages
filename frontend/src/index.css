@@ -183,6 +183,25 @@
     border-color: hsl(var(--communicator));
     box-shadow: 0 0 10px hsl(var(--communicator) / 0.3);
   }
+
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--terminal-bg-light));
+    border-left: 1px solid hsl(var(--terminal-green-dim) / 0.3);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--terminal-green-dim) / 0.5);
+    border-radius: 0;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--terminal-green-dim) / 0.7);
+  }
 }
 
 /* Animations */

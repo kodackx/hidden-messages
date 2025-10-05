@@ -17,6 +17,10 @@ from .schemas import (
     SessionHistoryResponse,
     SessionHistoryMessage,
     SessionHistoryGuess,
+    SessionListResponse,
+    SessionListItem,
+    SessionStatusResponse,
+    ParticipantInfo,
 )
 from .session_state import SessionState, active_sessions
 from ..core.logging import get_logger
@@ -302,21 +306,153 @@ async def next_turn(
         logger.exception("next_turn failed")
         raise HTTPException(status_code=500, detail=f"Failed to execute turn: {str(e)}")
 
-@router.get("/session/{session_id}/status")
-async def get_session_status(session_id: UUID):
-    """Get current status of a session"""
-    if session_id not in active_sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
+@router.get("/sessions", response_model=SessionListResponse)
+async def list_sessions(db: AsyncSession = Depends(get_db)):
+    """Get list of all sessions with basic info"""
+    logger.debug("Listing all sessions")
+    
+    # Get all sessions ordered by created_at descending (newest first)
+    sessions_result = await db.execute(
+        select(SessionModel).order_by(SessionModel.created_at.desc())
+    )
+    session_rows = list(sessions_result.scalars())
+    
+    sessions_list = []
+    for session in session_rows:
+        # Count messages for this session
+        message_count_result = await db.execute(
+            select(MessageModel).where(MessageModel.session_id == session.id)
+        )
+        message_count = len(list(message_count_result.scalars()))
+        
+        # Check if game is over (receiver guessed correctly or ran out of tries)
+        guesses_result = await db.execute(
+            select(GuessModel)
+            .where(GuessModel.session_id == session.id)
+            .order_by(GuessModel.turn.desc())
+        )
+        guess_rows = list(guesses_result.scalars())
+        
+        game_over = False
+        game_status = None
+        
+        if guess_rows:
+            # Check if any guess was correct
+            correct_guess = any(g.correct for g in guess_rows)
+            if correct_guess:
+                game_over = True
+                game_status = "win"
+            else:
+                # Check if tries exhausted
+                last_guess = guess_rows[0]
+                if last_guess.tries_remaining == 0:
+                    game_over = True
+                    game_status = "loss"
+        
+        sessions_list.append(
+            SessionListItem(
+                session_id=session.id,
+                topic=session.topic,
+                created_at=session.created_at,
+                message_count=message_count,
+                game_over=game_over,
+                game_status=game_status,
+            )
+        )
+    
+    return SessionListResponse(sessions=sessions_list)
 
+
+@router.get("/session/{session_id}/status", response_model=SessionStatusResponse)
+async def get_session_status(session_id: UUID, db: AsyncSession = Depends(get_db)):
+    """Get current status of a session"""
+    
+    # If session is not in memory, load it from database
+    if session_id not in active_sessions:
+        # Load from database
+        session_row = (
+            await db.execute(select(SessionModel).where(SessionModel.id == session_id))
+        ).scalar_one_or_none()
+        
+        if not session_row:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Restore session to memory
+        participants_meta = session_row.participants or {}
+        participants = []
+        for pid, pdata in participants_meta.items():
+            participants.append({
+                "id": pid,
+                "name": pdata.get("name", "Unknown"),
+                "role": pdata.get("role", "bystander"),
+                "provider": pdata.get("provider", "openai"),
+                "order": pdata.get("order", 0)
+            })
+        
+        # Calculate turn number from messages
+        messages_result = await db.execute(
+            select(MessageModel)
+            .where(MessageModel.session_id == session_id)
+            .order_by(MessageModel.turn.desc())
+        )
+        last_message = messages_result.scalars().first()
+        turn_number = last_message.turn if last_message else 0
+        
+        # Calculate tries remaining from guesses
+        guesses_result = await db.execute(
+            select(GuessModel)
+            .where(GuessModel.session_id == session_id)
+            .order_by(GuessModel.turn.desc())
+        )
+        guess_list = list(guesses_result.scalars())
+        tries_remaining = {p["id"]: 3 for p in participants if p["role"] == "receiver"}
+        for guess in guess_list:
+            if guess.participant_id in tries_remaining:
+                tries_remaining[guess.participant_id] = guess.tries_remaining
+                break
+        
+        # Check game over status
+        game_over = any(guess.correct for guess in guess_list) or \
+                    any(tries == 0 for tries in tries_remaining.values())
+        
+        # Determine game status
+        game_status = None
+        if game_over:
+            has_correct = any(guess.correct for guess in guess_list)
+            game_status = "win" if has_correct else "loss"
+        
+        # Restore to memory
+        active_sessions[session_id] = SessionState(
+            session_id=session_id,
+            topic=session_row.topic,
+            secret_word=session_row.secret_word,
+            participants=participants,
+            tries_remaining=tries_remaining,
+            turn_number=turn_number,
+            game_over=game_over,
+            game_status=game_status
+        )
+    
     session_state = active_sessions[session_id]
 
-    return {
-        "session_id": session_id,
-        "turn_number": session_state.turn_number,
-        "game_over": session_state.game_over,
-        "game_status": session_state.game_status,
-        "tries_remaining": session_state.tries_remaining
-    }
+    return SessionStatusResponse(
+        session_id=session_id,
+        topic=session_state.topic,
+        turn_number=session_state.turn_number,
+        game_over=session_state.game_over,
+        game_status=session_state.game_status,
+        tries_remaining=session_state.tries_remaining,
+        participants=[
+            ParticipantInfo(
+                id=p["id"],
+                name=p["name"],
+                role=p["role"],
+                provider=p["provider"],
+                order=p.get("order", 0)
+            )
+            for p in session_state.participants
+        ]
+    )
 
 
 @router.get("/session/{session_id}/history", response_model=SessionHistoryResponse)

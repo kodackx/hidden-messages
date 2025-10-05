@@ -90,8 +90,23 @@ export interface SessionHistoryResponse {
 
 export interface SessionStatusResponse {
   session_id: string;
+  topic: string;
   turn_number: number;
   game_over: boolean;
   game_status: "win" | "loss" | null;
   tries_remaining: Record<string, number>;
+  participants: ParticipantInfo[];
+}
+
+export interface SessionListItem {
+  session_id: string;
+  topic: string;
+  created_at: string;
+  message_count: number;
+  game_over: boolean;
+  game_status?: "win" | "loss" | null;
+}
+
+export interface SessionListResponse {
+  sessions: SessionListItem[];
 }

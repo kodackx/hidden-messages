@@ -19,12 +19,11 @@ COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini .
 
-# Install only dependencies (run as a regular app, no editable install)
-RUN uv export --format requirements-txt > requirements.txt \
-    && uv pip install --system -r requirements.txt
+# Install dependencies from lock file
+RUN uv sync --frozen --no-dev
 
 # Expose port
 EXPOSE 8000
 
 # Default command
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "--no-dev", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

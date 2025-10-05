@@ -3,6 +3,7 @@ import { ParticipantConfig, Provider, Role, StartSessionRequest } from '@/types/
 import { Trash2, Plus, Info, Server, Cpu } from 'lucide-react';
 import { getApiMode, setApiMode } from '@/services/api';
 import Footer from './Footer';
+import SessionList from './SessionList';
 import {
   Tooltip,
   TooltipContent,
@@ -13,6 +14,7 @@ import { APP_VERSION } from '@/lib/constants';
 
 interface SessionSetupProps {
   onSessionStart: (request: StartSessionRequest) => void;
+  onResumeSession: (sessionId: string) => void;
   onError: (error: string) => void;
   isLoading: boolean;
 }
@@ -23,7 +25,7 @@ const DEFAULT_PARTICIPANTS: ParticipantConfig[] = [
   { name: 'Participant Gamma', provider: 'google-gla', role: 'bystander', order: 2 },
 ];
 
-export default function SessionSetup({ onSessionStart, onError, isLoading }: SessionSetupProps) {
+export default function SessionSetup({ onSessionStart, onResumeSession, onError, isLoading }: SessionSetupProps) {
   const [topic, setTopic] = useState('colonizing Mars');
   const [secretWord, setSecretWord] = useState('');
   const [participants, setParticipants] = useState<ParticipantConfig[]>(DEFAULT_PARTICIPANTS);
@@ -142,6 +144,14 @@ export default function SessionSetup({ onSessionStart, onError, isLoading }: Ses
         </div>
 
         <div className="border-t border-primary mb-6"></div>
+
+        <SessionList onResumeSession={onResumeSession} />
+
+        <div className="terminal-panel mb-6">
+          <h2 className="text-lg uppercase tracking-wide text-terminal-glow mb-4">
+            &gt;&gt; NEW_EXPERIMENT
+          </h2>
+        </div>
 
         <div className="space-y-6">
           <div>

@@ -93,3 +93,26 @@ class SessionHistoryResponse(BaseModel):
     participants: Dict[str, Dict[str, Optional[str]]]
     messages: List[SessionHistoryMessage]
     guesses: List[SessionHistoryGuess]
+
+
+class SessionListItem(BaseModel):
+    session_id: UUID
+    topic: str
+    created_at: datetime
+    message_count: int
+    game_over: bool
+    game_status: Optional[str] = None
+
+
+class SessionListResponse(BaseModel):
+    sessions: List[SessionListItem]
+
+
+class SessionStatusResponse(BaseModel):
+    session_id: UUID
+    topic: str
+    turn_number: int
+    game_over: bool
+    game_status: Optional[str] = None
+    tries_remaining: Dict[str, int]
+    participants: List[ParticipantInfo]

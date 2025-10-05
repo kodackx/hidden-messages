@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ParticipantInfo } from '@/types/api.types';
+import { ParticipantInfo, StartSessionRequest } from '@/types/api.types';
 import IntroPage from '@/components/IntroPage';
 import SessionSetup from '@/components/SessionSetup';
 import ConversationView from '@/components/ConversationView';
@@ -33,7 +33,7 @@ const Index = () => {
     setAppState('setup');
   };
 
-  const handleSessionStart = async (request: any) => {
+  const handleSessionStart = async (request: StartSessionRequest) => {
     setIsLoading(true);
     try {
       const { apiClient } = await import('@/services/api');
@@ -50,6 +50,26 @@ const Index = () => {
       });
     } catch (err) {
       handleError(err instanceof Error ? err.message : 'Failed to start session');
+    }
+  };
+
+  const handleResumeSession = async (sessionIdToResume: string) => {
+    setIsLoading(true);
+    try {
+      const { apiClient } = await import('@/services/api');
+      const statusResponse = await apiClient.getSessionStatus(sessionIdToResume);
+      
+      setSessionId(statusResponse.session_id);
+      setTopic(statusResponse.topic);
+      setParticipants(statusResponse.participants);
+      setAppState('conversation');
+      setIsLoading(false);
+      
+      toast.success('Session resumed', {
+        description: `ID: ${statusResponse.session_id.slice(0, 8)}...`,
+      });
+    } catch (err) {
+      handleError(err instanceof Error ? err.message : 'Failed to resume session');
     }
   };
 
@@ -81,6 +101,7 @@ const Index = () => {
       ) : appState === 'setup' ? (
         <SessionSetup
           onSessionStart={handleSessionStart}
+          onResumeSession={handleResumeSession}
           onError={handleError}
           isLoading={isLoading}
         />

@@ -5,6 +5,7 @@ import type {
   NextTurnResponse,
   SessionHistoryResponse,
   SessionStatusResponse,
+  SessionListResponse,
 } from '../types/api.types';
 import { mockApiClient } from './mockApi';
 
@@ -80,6 +81,19 @@ class ApiClient {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.detail || `Failed to fetch status: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  async listSessions(): Promise<SessionListResponse> {
+    if (isMockMode()) {
+      return mockApiClient.listSessions();
+    }
+
+    const response = await fetch(`${this.baseUrl}/sessions`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `Failed to fetch sessions: ${response.statusText}`);
     }
     return response.json();
   }
