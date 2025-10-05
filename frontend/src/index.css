@@ -1,0 +1,230 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Terminal/Retro AI Research Lab Design System */
+/* All colors MUST be HSL */
+
+@layer base {
+  :root {
+    /* Terminal color palette */
+    --terminal-bg: 0 0% 4%;
+    --terminal-bg-light: 0 0% 7%;
+    --terminal-green: 127 100% 50%;
+    --terminal-green-dim: 127 100% 40%;
+    --terminal-green-darker: 127 100% 28%;
+    
+    /* Agent colors with glow */
+    --communicator: 191 100% 50%;
+    --communicator-glow: 191 100% 50%;
+    --receiver: 38 100% 50%;
+    --receiver-glow: 38 100% 50%;
+    --bystander: 0 0% 80%;
+    --bystander-glow: 0 0% 80%;
+    --system: 300 100% 50%;
+    --system-glow: 300 100% 50%;
+    
+    /* Status colors */
+    --error: 0 100% 50%;
+    --success: 120 100% 50%;
+    
+    /* Standard semantic tokens */
+    --background: 0 0% 4%;
+    --foreground: 127 100% 50%;
+    --card: 0 0% 7%;
+    --card-foreground: 127 100% 50%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 127 100% 50%;
+    --primary: 127 100% 50%;
+    --primary-foreground: 0 0% 4%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 127 100% 50%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 127 100% 40%;
+    --accent: 191 100% 50%;
+    --accent-foreground: 0 0% 4%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 127 100% 50%;
+    --input: 127 100% 50%;
+    --ring: 191 100% 50%;
+    --radius: 0.25rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-mono;
+  }
+}
+
+/* Terminal Effects */
+@layer components {
+  /* CRT scanline overlay */
+  .scanlines {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scanlines::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.15),
+      rgba(0, 0, 0, 0.15) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* CRT screen curvature and glow */
+  .crt-screen {
+    border-radius: 4px;
+    box-shadow: inset 0 0 50px hsl(var(--terminal-green) / 0.1);
+    position: relative;
+  }
+
+  .crt-screen::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.3) 100%);
+    pointer-events: none;
+  }
+
+  /* Text glow effects */
+  .text-terminal-glow {
+    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+  }
+
+  .text-communicator-glow {
+    color: hsl(var(--communicator));
+    text-shadow: 0 0 10px hsl(var(--communicator-glow) / 0.5), 0 0 20px hsl(var(--communicator-glow) / 0.3);
+  }
+
+  .text-receiver-glow {
+    color: hsl(var(--receiver));
+    text-shadow: 0 0 10px hsl(var(--receiver-glow) / 0.5), 0 0 20px hsl(var(--receiver-glow) / 0.3);
+  }
+
+  .text-bystander-glow {
+    color: hsl(var(--bystander));
+    text-shadow: 0 0 5px hsl(var(--bystander-glow) / 0.3);
+  }
+
+  .text-system-glow {
+    color: hsl(var(--system));
+    text-shadow: 0 0 10px hsl(var(--system-glow) / 0.5), 0 0 20px hsl(var(--system-glow) / 0.3);
+  }
+
+  /* Terminal panel styling */
+  .terminal-panel {
+    @apply border border-primary bg-card p-4 rounded-sm;
+  }
+
+  /* Terminal button */
+  .terminal-button {
+    @apply px-4 py-2 border border-primary bg-transparent text-primary hover:bg-primary hover:text-background transition-all font-mono uppercase tracking-wider text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-primary;
+  }
+
+  .terminal-button-accent {
+    @apply px-4 py-2 border bg-transparent transition-all font-mono uppercase tracking-wider text-sm disabled:opacity-50 disabled:cursor-not-allowed;
+    color: hsl(var(--communicator));
+    border-color: hsl(var(--communicator));
+  }
+
+  .terminal-button-accent:not(:disabled):hover {
+    background-color: hsl(var(--communicator));
+    color: hsl(var(--terminal-bg));
+  }
+
+  .terminal-button-danger {
+    @apply px-4 py-2 border bg-transparent transition-all font-mono uppercase tracking-wider text-sm;
+    color: hsl(var(--error));
+    border-color: hsl(var(--error));
+  }
+
+  .terminal-button-danger:hover {
+    background-color: hsl(var(--error));
+    color: hsl(var(--terminal-bg));
+  }
+
+  /* Terminal input */
+  .terminal-input {
+    @apply bg-background border border-primary text-primary px-3 py-2 font-mono focus:outline-none rounded-sm;
+    box-shadow: none;
+  }
+
+  .terminal-input:focus {
+    border-color: hsl(var(--communicator));
+    box-shadow: 0 0 10px hsl(var(--communicator) / 0.3);
+  }
+
+  /* Terminal select */
+  .terminal-select {
+    @apply bg-background border border-primary text-primary px-3 py-2 font-mono focus:outline-none rounded-sm;
+  }
+
+  .terminal-select:focus {
+    border-color: hsl(var(--communicator));
+    box-shadow: 0 0 10px hsl(var(--communicator) / 0.3);
+  }
+}
+
+/* Animations */
+@layer utilities {
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.9; }
+  }
+
+  .terminal-flicker {
+    animation: flicker 0.15s infinite;
+  }
+
+  @keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .cursor-blink {
+    animation: cursor-blink 1s step-end infinite;
+  }
+
+  @keyframes glitch {
+    0% { transform: translate(0); }
+    20% { transform: translate(-2px, 2px); }
+    40% { transform: translate(-2px, -2px); }
+    60% { transform: translate(2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    100% { transform: translate(0); }
+  }
+
+  .glitch-hover:hover {
+    animation: glitch 0.3s infinite;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

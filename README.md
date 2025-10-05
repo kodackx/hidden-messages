@@ -23,32 +23,37 @@ This repository contains a FastAPI backend that orchestrates multi-agent session
 ```
 .
 ├── backend/              # FastAPI app, agents, models, migrations, Dockerfile
+├── frontend/             # React + Vite frontend application
+├── docs/                 # Documentation files (guides, specs, references)
 ├── ideas/                # PRD, prompt and UI/UX notes
-├── docker-compose.yml    # API + Postgres for local dev
+├── docker-compose.yml    # API + Frontend + Postgres for local dev
 ├── Makefile              # Handy commands for dev workflow
 └── README.md             # You are here
 ```
 
-## Quick start (Docker)
+## Quick start (Full Stack)
 Prereqs: Docker Desktop (or Docker Engine) and Compose.
 
-1) The Docker environment is pre-configured with PostgreSQL. Create `.env.docker` from the example:
+1) Add your API keys to `.env.docker`:
 ```bash
-cp .env.docker.example .env.docker
-# Edit .env.docker with your API keys
+# Edit .env.docker with your LLM API keys
+OPENAI_API_KEY=your-key-here
+ANTHROPIC_API_KEY=your-key-here
+GOOGLE_API_KEY=your-key-here
 ```
 
-2) Start services:
+2) Start all services (frontend + backend + database):
 ```bash
-docker compose up --build
+make run
+# or: docker compose up --build
 ```
 
-3) Visit the API at `http://localhost:8000`. Health check:  
-```bash
-curl http://localhost:8000/api/health
-```
+3) Access the application:
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
 
-Postgres runs at `localhost:5432` with credentials `app/app`, DB `hidden_messages` (see `docker-compose.yml` and `.env.docker`).
+To stop: `make down` or `docker compose down`
 
 ## Quick start (local, without Docker)
 This uses SQLite by default (file `backend/hidden_messages_dev.db`). 
@@ -129,29 +134,75 @@ Returns latest messages, any guess result, and game status.
 curl http://localhost:8000/api/session/<your-session-id>/status
 ```
 
-## Makefile cheatsheet
-If you have `make`, these mirror the Docker workflows:
+## Makefile quick reference
 ```bash
-make install        # Install backend deps locally (uv + editable)
-make dev            # docker compose up --build
-make up             # Start services detached
-make down           # Stop services
-make build          # Build images
-make clean          # Remove containers/volumes and prune
-make migrate        # Run alembic upgrade head in API container
-make shell-api      # Bash into API container
-make shell-db       # psql into Postgres
-make logs           # Tail all container logs
-make fresh          # Clean, rebuild, start, migrate
-make format         # black + ruff --fix
-make lint           # ruff + mypy
+# Quick Start
+make run            # Start full stack (frontend + backend + db)
+make dev            # Same as 'make run'
+make down           # Stop all services
+
+# Installation
+make install        # Install both frontend and backend dependencies
+make install-backend   # Install backend only (Python)
+make install-frontend  # Install frontend only (Node.js)
+
+# Local Development (without Docker)
+make run-backend    # Run backend locally
+make run-frontend   # Run frontend locally
+
+# Docker
+make up             # Start services (without rebuild)
+make build          # Build Docker images
+make clean          # Remove containers/volumes
+make fresh          # Clean + rebuild + start
+
+# Testing
+make test           # Run backend tests
+make test-e2e       # Run end-to-end tests
+
+# Database
+make migrate        # Run database migrations
+make shell-db       # Connect to PostgreSQL
+
+# Logs & Monitoring
+make logs           # View all logs
+make logs-api       # Backend logs only
+make logs-web       # Frontend logs only
+
+# Code Quality
+make format         # Format Python code
+make lint           # Lint Python code
 ```
+
+For more commands, run `make help` or see [docs/MAKEFILE_REFERENCE.md](docs/MAKEFILE_REFERENCE.md)
 
 ## Notes
 - The backend auto-creates tables on startup for convenience, and migrations are available via Alembic.
 - Agents and turn logic live under `backend/app/agents/`. API schemas are in `backend/app/api/schemas.py`.
 - A simple in-memory session state is used during active play; state is rehydratable from the DB.
 
+## Documentation
+
+### Core Documentation
+- **[CLAUDE.md](CLAUDE.md)** - Guidelines for AI coding assistants working with this codebase
+- **[CODE_REVIEW_FEEDBACK.md](CODE_REVIEW_FEEDBACK.md)** - Code review insights and improvements
+
+### Guides & References
+- **[Integration Guide](docs/INTEGRATION_GUIDE.md)** - Complete guide for setting up frontend + backend
+- **[Makefile Reference](docs/MAKEFILE_REFERENCE.md)** - Comprehensive reference for all make commands
+- **[Testing Summary](docs/TESTING_SUMMARY.md)** - Overview of testing approach and results
+- **[E2E Tests](docs/E2E_TESTS_ADDED.md)** - End-to-end testing documentation
+
+### Frontend Documentation
+- **[Frontend Spec](docs/FRONTEND_SPEC.md)** - Frontend architecture and design
+- **[Frontend Handoff](docs/FRONTEND_HANDOFF.md)** - Frontend integration notes
+- **[Terminal UI Reference](docs/TERMINAL_UI_REFERENCE.md)** - Terminal-style UI component guide
+
+### Design & Planning
+- **[Agents Overview](docs/agents.md)** - Agent roles and communication protocols
+- **[Spec Updates](docs/SPEC_UPDATES_SUMMARY.md)** - Historical spec changes
+
 ## Next steps
-- Build a lightweight frontend to visualize agent messages and guesses.
-- Expand evaluation metrics and logging for hidden-message detection.
+- Expand evaluation metrics and logging for hidden-message detection
+- Add real-time conversation streaming
+- Implement session replay and analysis tools
