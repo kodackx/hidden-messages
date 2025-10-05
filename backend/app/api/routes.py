@@ -175,6 +175,21 @@ async def next_turn(
 
     session_state = active_sessions[request.session_id]
 
+    expected_participants = {p["id"] for p in session_state.participants}
+    cached_participants = set(agent_manager.agents.keys())
+    if not expected_participants.issubset(cached_participants):
+        agents_map = {
+            p["id"]: {"provider": p.get("provider"), "role": p.get("role")}
+            for p in session_state.participants
+        }
+        await agent_manager.initialize_agents(session_state.secret_word, agents=agents_map)
+        logger.debug(
+            "Reinitialized agents for session %s after cache miss (expected=%s, cached=%s)",
+            request.session_id,
+            sorted(expected_participants),
+            sorted(agent_manager.agents.keys()),
+        )
+
     # Check if game is over
     if session_state.game_over:
         raise HTTPException(status_code=400, detail="Game is already over")

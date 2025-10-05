@@ -114,7 +114,11 @@ class HiddenMessageAgent:
         Returns:
             tuple: (AgentOutput or None, error_message or None)
         """
-        agent = self.agents[context.participant_id]
+        agent = self.agents.get(context.participant_id)
+        if agent is None:
+            error_msg = f"Agent not initialized for participant_id={context.participant_id}"
+            self.logger.error(error_msg)
+            return None, error_msg
 
         # Build the full prompt (inline the system prompt to avoid unsupported kwargs)
         system_text = SYSTEM_PROMPT.format(topic=context.topic)
