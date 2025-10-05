@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SessionListItem } from '@/types/api.types';
-import { Clock, MessageSquare, CheckCircle2, XCircle, Play } from 'lucide-react';
+import { Clock, MessageSquare, XCircle } from 'lucide-react';
 import { apiClient } from '@/services/api';
 import { toast } from 'sonner';
 
@@ -14,6 +14,7 @@ export default function SessionList({ onResumeSession, isResuming = false }: Ses
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     loadSessions();
@@ -50,9 +51,21 @@ export default function SessionList({ onResumeSession, isResuming = false }: Ses
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const handleResumeClick = (sessionId: string) => {
-    setResumingSessionId(sessionId);
-    onResumeSession(sessionId);
+  useEffect(() => {
+    if (!isResuming) {
+      setResumingSessionId(null);
+    }
+  }, [isResuming]);
+
+  const handleSessionSelect = (sessionId: string) => {
+    if (isResuming) return;
+    setSelectedSessionId(sessionId);
+  };
+
+  const handleResumeExecute = () => {
+    if (!selectedSessionId) return;
+    setResumingSessionId(selectedSessionId);
+    onResumeSession(selectedSessionId);
   };
 
   if (isLoading) {
@@ -95,14 +108,17 @@ export default function SessionList({ onResumeSession, isResuming = false }: Ses
 
       <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar">
         {sessions.map((session) => {
+          const isSelected = selectedSessionId === session.session_id;
           const isThisSessionResuming = resumingSessionId === session.session_id;
           return (
           <div
             key={session.session_id}
-            className={`border border-muted p-3 transition-all group ${
+            className={`border p-3 transition-all group ${
+              isSelected ? 'border-terminal-green bg-terminal-green/5' : 'border-muted'
+            } ${
               isResuming && !isThisSessionResuming ? 'opacity-50 cursor-not-allowed' : 'hover:border-terminal-green-dim cursor-pointer'
             }`}
-            onClick={() => !isResuming && handleResumeClick(session.session_id)}
+            onClick={() => handleSessionSelect(session.session_id)}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
@@ -142,42 +158,58 @@ export default function SessionList({ onResumeSession, isResuming = false }: Ses
                   </div>
                 </div>
               </div>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!isResuming) handleResumeClick(session.session_id);
-                }}
-                disabled={isResuming}
-                className="flex items-center gap-1 px-2 py-1 border border-terminal-green-dim text-terminal-green-dim hover:bg-terminal-green-dim/10 transition-colors text-xs uppercase opacity-0 group-hover:opacity-100 disabled:opacity-50"
-              >
-                {isThisSessionResuming ? (
-                  <>
-                    <span className="cursor-blink">LOADING</span>
-                  </>
-                ) : (
-                  <>
-                    <Play size={12} />
-                    <span>RESUME</span>
-                  </>
-                )}
-              </button>
+              {isSelected && !isResuming && (
+                <span className="text-xs px-2 py-1 border border-terminal-green text-terminal-green uppercase tracking-wide">
+                  SELECTED
+                </span>
+              )}
+              {isThisSessionResuming && (
+                <span className="text-xs px-2 py-1 border border-terminal-green-dim text-terminal-green-dim uppercase tracking-wide animate-pulse">
+                  RESUMING
+                </span>
+              )}
             </div>
           </div>
           );
         })}
       </div>
+
+      <button
+        onClick={handleResumeExecute}
+        disabled={!selectedSessionId || isResuming}
+        className={`terminal-button-receiver w-full mt-4 py-4 text-lg font-bold uppercase tracking-wide transition-transform disabled:opacity-100 disabled:cursor-not-allowed flex items-center justify-center ${
+          !selectedSessionId || isResuming ? '' : 'animate-pulse hover:animate-none hover:scale-[1.02]'
+        }`}
+      >
+        {isResuming && resumingSessionId ? (
+          <span className="flex flex-col items-center gap-2 text-terminal-bg">
+            <span className="inline-flex items-center gap-2">
+              &gt;&gt;&gt;
+              <span className="animate-pulse">RESUMING SESSION</span>
+              &gt;&gt;&gt;
+            </span>
+            <span className="text-xs uppercase tracking-wide opacity-80">
+              Stand by while we resume the conversation
+            </span>
+          </span>
+        ) : (
+          <>&gt; [EXECUTE: RESUME_SESSION]</>
+        )}
+      </button>
       
       {/* Loading Overlay */}
       {isResuming && resumingSessionId && (
-        <div className="mt-4 border border-terminal-green p-4 bg-terminal-green/5 animate-pulse">
-          <div className="flex items-center justify-center gap-2 text-terminal-glow uppercase tracking-wide text-sm">
-            <span>&gt;&gt;&gt; LOADING SESSION DATA</span>
-            <span className="cursor-blink">_</span>
+        <div className="mt-4 border border-terminal-green-dim/40 bg-terminal-bg-light/60 p-4">
+          <div className="flex flex-col items-center gap-2 text-terminal-glow uppercase tracking-wide text-sm">
+            <span className="inline-flex items-center gap-2">
+              &gt;&gt;&gt;
+              <span className="animate-pulse">LOADING SESSION</span>
+              &gt;&gt;&gt;
+            </span>
+            <span className="text-xs text-terminal-green-dim tracking-wide">
+              Stand by while we load the conversation
+            </span>
           </div>
-          <p className="text-center text-xs text-terminal-green-dim mt-2 uppercase">
-            PLEASE WAIT, DO NOT NAVIGATE AWAY
-          </p>
         </div>
       )}
     </div>

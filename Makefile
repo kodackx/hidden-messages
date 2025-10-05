@@ -77,18 +77,18 @@ install-frontend:
 
 # Run full stack (frontend + backend + database)
 run:
-    @echo "Starting full stack (frontend + backend + database) in detached mode..."
-    @echo "Frontend will be available at: http://localhost:5173"
-    @echo "Backend API will be available at: http://localhost:8000"
-    @echo "API Docs will be available at: http://localhost:8000/docs"
-    docker compose up --build -d
+	@echo "Starting full stack (frontend + backend + database) in detached mode..."
+	@echo "Frontend will be available at: http://localhost:5173"
+	@echo "Backend API will be available at: http://localhost:8000"
+	@echo "API Docs will be available at: http://localhost:8000/docs"
+	docker compose up --build -d
 
 dev:
-    @echo "Starting full stack (frontend + backend + database) interactively..."
-    @echo "Frontend will be available at: http://localhost:5173"
-    @echo "Backend API will be available at: http://localhost:8000"
-    @echo "API Docs will be available at: http://localhost:8000/docs"
-    docker compose up --build
+	@echo "Starting full stack (frontend + backend + database) interactively..."
+	@echo "Frontend will be available at: http://localhost:5173"
+	@echo "Backend API will be available at: http://localhost:8000"
+	@echo "API Docs will be available at: http://localhost:8000/docs"
+	docker compose up --build
 
 # Run backend locally (without Docker)
 run-backend:
