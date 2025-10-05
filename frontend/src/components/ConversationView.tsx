@@ -37,14 +37,72 @@ export default function ConversationView({
   const [error, setError] = useState<string | null>(null);
   const [triesRemaining, setTriesRemaining] = useState<Record<string, number>>({});
   const conversationEndRef = useRef<HTMLDivElement>(null);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
 
   useEffect(() => {
-    // Initialize tries remaining for receiver
-    const receiver = participants.find(p => p.role === 'receiver');
-    if (receiver) {
-      setTriesRemaining({ [receiver.id]: 3 });
-    }
-  }, [participants]);
+    // Load existing history when resuming a session
+    const loadHistory = async () => {
+      if (historyLoaded) return;
+      
+      try {
+        const { apiClient } = await import('@/services/api');
+        const history = await apiClient.getSessionHistory(sessionId);
+        
+        // Group messages by turn
+        const turnMap = new Map<number, TurnData>();
+        
+        history.messages.forEach(msg => {
+          if (!turnMap.has(msg.turn)) {
+            turnMap.set(msg.turn, {
+              turnNumber: msg.turn,
+              messages: [],
+              guessResult: undefined,
+            });
+          }
+          turnMap.get(msg.turn)!.messages.push({
+            participant_id: msg.participant_id,
+            participant_name: msg.participant_name,
+            participant_role: msg.participant_role,
+            comms: msg.comms,
+            internal_thoughts: msg.internal_thoughts,
+          });
+        });
+        
+        // Add guess results
+        history.guesses.forEach(guess => {
+          if (turnMap.has(guess.turn)) {
+            turnMap.get(guess.turn)!.guessResult = {
+              agent: guess.participant_id,
+              correct: guess.correct,
+              tries_remaining: guess.tries_remaining,
+            };
+          }
+        });
+        
+        // Convert to array and sort by turn
+        const loadedTurns = Array.from(turnMap.values()).sort((a, b) => a.turnNumber - b.turnNumber);
+        setTurns(loadedTurns);
+        
+        // Get status to update tries remaining and game state
+        const status = await apiClient.getSessionStatus(sessionId);
+        setTriesRemaining(status.tries_remaining);
+        setGameOver(status.game_over);
+        setGameStatus(status.game_status);
+        
+        setHistoryLoaded(true);
+      } catch (err) {
+        console.error('Failed to load history:', err);
+        // Initialize tries for new session
+        const receiver = participants.find(p => p.role === 'receiver');
+        if (receiver) {
+          setTriesRemaining({ [receiver.id]: 3 });
+        }
+        setHistoryLoaded(true);
+      }
+    };
+    
+    loadHistory();
+  }, [sessionId, historyLoaded, participants]);
 
   useEffect(() => {
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });

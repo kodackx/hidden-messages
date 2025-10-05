@@ -432,6 +432,13 @@ async def get_session_status(session_id: UUID, db: AsyncSession = Depends(get_db
             game_over=game_over,
             game_status=game_status
         )
+        
+        # Re-initialize agents for this session
+        agents_map = {p["id"]: {"provider": p["provider"], "role": p["role"]} for p in participants}
+        await agent_manager.initialize_agents(
+            secret_word=session_row.secret_word,
+            agents=agents_map
+        )
     
     session_state = active_sessions[session_id]
 
