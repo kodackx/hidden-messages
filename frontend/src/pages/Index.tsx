@@ -88,6 +88,15 @@ const Index = () => {
     }
   };
 
+  const handleGoHome = () => {
+    setAppState('setup');
+    setSessionId(null);
+    setTopic('');
+    setParticipants([]);
+    setShowHistory(false);
+    setIsLoading(false);
+  };
+
   const handleViewHistory = () => {
     if (sessionId) {
       setShowHistory(true);
@@ -112,6 +121,7 @@ const Index = () => {
           participants={participants}
           onNewSession={handleNewSession}
           onViewHistory={handleViewHistory}
+          onGoHome={handleGoHome}
         />
       ) : null}
 

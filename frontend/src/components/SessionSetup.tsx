@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ParticipantConfig, Provider, Role, StartSessionRequest } from '@/types/api.types';
-import { Trash2, Plus, Info, Server, Cpu } from 'lucide-react';
+import { Trash2, Plus, Info, Server, Cpu, ChevronDown, ChevronRight } from 'lucide-react';
 import { getApiMode, setApiMode } from '@/services/api';
 import Footer from './Footer';
 import SessionList from './SessionList';
@@ -31,6 +31,9 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
   const [participants, setParticipants] = useState<ParticipantConfig[]>(DEFAULT_PARTICIPANTS);
   const [isStarting, setIsStarting] = useState(false);
   const [apiMode, setCurrentApiMode] = useState<'mock' | 'real'>(getApiMode());
+  const [showPreviousSessions, setShowPreviousSessions] = useState(false);
+  const [showNewExperiment, setShowNewExperiment] = useState(false);
+  const actionLocked = isLoading || isStarting;
 
   useEffect(() => {
     setCurrentApiMode(getApiMode());
@@ -123,11 +126,12 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
           
           <button
             onClick={handleApiModeToggle}
-            className={`flex items-center gap-2 px-4 py-2 border-2 transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 border-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
               apiMode === 'mock'
                 ? 'border-system text-system-glow bg-system/10'
                 : 'border-communicator text-communicator-glow bg-communicator/10'
             }`}
+            disabled={actionLocked}
           >
             {apiMode === 'mock' ? (
               <>
@@ -145,15 +149,72 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
 
         <div className="border-t border-primary mb-6"></div>
 
-        <SessionList onResumeSession={onResumeSession} />
-
-        <div className="terminal-panel mb-6">
-          <h2 className="text-lg uppercase tracking-wide text-terminal-glow mb-4">
-            &gt;&gt; NEW_EXPERIMENT
-          </h2>
+        {/* Previous Sessions Section */}
+        <div className="mb-8">
+          <button
+            onClick={() => !actionLocked && setShowPreviousSessions(!showPreviousSessions)}
+            className="w-full flex items-center justify-between p-4 border-2 border-receiver bg-terminal-bg-light hover:bg-receiver/10 transition-all mb-4 disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={actionLocked}
+          >
+            <div className="flex items-center gap-3">
+              {showPreviousSessions ? (
+                <ChevronDown className="text-receiver" size={20} />
+              ) : (
+                <ChevronRight className="text-receiver" size={20} />
+              )}
+              <h2 className="text-lg uppercase tracking-wide text-receiver text-receiver-glow">
+                &gt;&gt; RESUME_PREVIOUS_SESSIONS
+              </h2>
+            </div>
+            <span className="text-xs text-receiver-glow uppercase tracking-wider">
+              {showPreviousSessions ? '[COLLAPSE]' : '[EXPAND]'}
+            </span>
+          </button>
+          {showPreviousSessions && (
+            <div className={`animate-in fade-in-50 duration-200 ${actionLocked ? 'opacity-60 pointer-events-none' : ''}`}>
+              <SessionList onResumeSession={onResumeSession} isResuming={isLoading} />
+            </div>
+          )}
         </div>
 
-        <div className="space-y-6">
+        {/* Divider */}
+        <div className="relative my-10">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t-2 border-terminal-green-dim"></div>
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-terminal-bg px-6 text-terminal-green uppercase text-sm tracking-widest">
+              ─── OR ───
+            </span>
+          </div>
+        </div>
+
+        {/* New Experiment Section */}
+        <div className="mb-6">
+          <button
+            onClick={() => !actionLocked && setShowNewExperiment(!showNewExperiment)}
+            disabled={actionLocked}
+            className="w-full flex items-center justify-between p-4 border-2 border-communicator bg-terminal-bg-light hover:bg-communicator/10 transition-all mb-4 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <div className="flex items-center gap-3">
+              {showNewExperiment ? (
+                <ChevronDown className="text-communicator" size={20} />
+              ) : (
+                <ChevronRight className="text-communicator" size={20} />
+              )}
+              <h2 className="text-lg uppercase tracking-wide text-communicator text-communicator-glow">
+                &gt;&gt; NEW_EXPERIMENT
+              </h2>
+            </div>
+            <span className="text-xs text-communicator-glow uppercase tracking-wider">
+              {showNewExperiment ? '[COLLAPSE]' : '[EXPAND]'}
+            </span>
+          </button>
+        </div>
+
+        {showNewExperiment && (
+          <div className="space-y-6 animate-in fade-in-50 duration-200">
+          <div className={`space-y-6 ${actionLocked ? 'opacity-60 pointer-events-none' : ''}`}>
           <div>
             <div className="flex items-center gap-2 mb-2">
               <label className="block text-sm uppercase tracking-wide text-terminal-glow">
@@ -175,6 +236,7 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
               className="terminal-input w-full"
               maxLength={500}
               placeholder="Enter topic..."
+              disabled={actionLocked}
             />
           </div>
 
@@ -199,6 +261,7 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
               className="terminal-input w-full"
               maxLength={100}
               placeholder="Leave blank for random..."
+              disabled={actionLocked}
             />
           </div>
 
@@ -229,8 +292,9 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
                     {participants.length > 3 && (
                       <button
                         onClick={() => removeParticipant(index)}
-                        className="text-error hover:text-error/80 transition-colors"
+                        className="text-error hover:text-error/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Remove agent"
+                        disabled={actionLocked}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -256,6 +320,7 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
                         onChange={(e) => updateParticipant(index, 'name', e.target.value)}
                         className="terminal-input w-full text-sm"
                         maxLength={100}
+                        disabled={actionLocked}
                       />
                     </div>
 
@@ -275,6 +340,7 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
                         value={participant.provider}
                         onChange={(e) => updateParticipant(index, 'provider', e.target.value)}
                         className="terminal-select w-full text-sm"
+                        disabled={actionLocked}
                       >
                         {providerOptions.map(option => (
                           <option key={option.value} value={option.value}>
@@ -300,6 +366,7 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
                         value={participant.role}
                         onChange={(e) => updateParticipant(index, 'role', e.target.value)}
                         className="terminal-select w-full text-sm"
+                        disabled={actionLocked}
                       >
                         {roleOptions.map(option => (
                           <option key={option.value} value={option.value}>
@@ -327,6 +394,7 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
                         onChange={(e) => updateParticipant(index, 'order', e.target.value)}
                         className="terminal-input w-full text-sm"
                         min={0}
+                        disabled={actionLocked}
                       />
                     </div>
                   </div>
@@ -335,7 +403,8 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
 
               <button
                 onClick={addParticipant}
-                className="terminal-button w-full flex items-center justify-center gap-2"
+                className="terminal-button w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={actionLocked}
               >
                 <Plus size={16} />
                 ADD_AGENT
@@ -343,45 +412,48 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
             </div>
           </div>
 
-          <div className="pt-4 space-y-4">
-            {/* Configuration Recap */}
-            <div className="border border-terminal-green-dim/30 p-4 bg-terminal-bg-light/50">
-              <div className="text-xs uppercase tracking-wider text-terminal-green-dim space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-communicator-glow">&gt;</span>
-                  <span>TOPIC:</span>
-                  <span className="text-terminal-green truncate flex-1">{topic || '(not set)'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-receiver-glow">&gt;</span>
-                  <span>SECRET:</span>
-                  <span className="text-terminal-green">{secretWord || 'RANDOM'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-system-glow">&gt;</span>
-                  <span>AGENTS:</span>
-                  <span className="text-terminal-green">{participants.length} configured</span>
-                </div>
+          <div className="border border-terminal-green-dim/30 p-4 bg-terminal-bg-light/50">
+            <div className="text-xs uppercase tracking-wider text-terminal-green-dim space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-communicator-glow">&gt;</span>
+                <span>TOPIC:</span>
+                <span className="text-terminal-green truncate flex-1">{topic || '(not set)'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-receiver-glow">&gt;</span>
+                <span>SECRET:</span>
+                <span className="text-terminal-green">{secretWord || 'RANDOM'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-system-glow">&gt;</span>
+                <span>AGENTS:</span>
+                <span className="text-terminal-green">{participants.length} configured</span>
               </div>
             </div>
-
-            <button
-              onClick={validateAndSubmit}
-              disabled={isLoading || isStarting}
-              className="terminal-button-accent w-full py-4 text-lg font-bold animate-pulse hover:animate-none hover:scale-[1.02] transition-transform disabled:opacity-100"
-            >
-              {isLoading ? (
-                <>INITIALIZING<span className="cursor-blink">_</span></>
-              ) : isStarting ? (
-                <span className="inline-flex items-center gap-2">
-                  &gt;&gt;&gt;<span className="animate-pulse">STARTING SESSION</span>&gt;&gt;&gt;
-                </span>
-              ) : (
-                <>&gt; [EXECUTE: START_SESSION]</>
-              )}
-            </button>
           </div>
-        </div>
+          </div>
+          <button
+            onClick={validateAndSubmit}
+            disabled={actionLocked}
+            className={`terminal-button-accent w-full py-4 text-lg font-bold transition-transform disabled:opacity-100 disabled:cursor-not-allowed ${actionLocked ? '' : 'animate-pulse hover:animate-none hover:scale-[1.02]'}`}
+          >
+            {isLoading ? (
+              <>INITIALIZING<span className="cursor-blink">_</span></>
+            ) : isStarting ? (
+              <span className="flex flex-col items-center gap-2 text-terminal-bg">
+                <span className="inline-flex items-center gap-2">
+                  &gt;&gt;&gt;<span className="animate-pulse">INITIALIZING</span>&gt;&gt;&gt;
+                </span>
+                <span className="text-xs uppercase tracking-wide opacity-80">
+                  Stand by while we initialize the conversation
+                </span>
+              </span>
+            ) : (
+              <>&gt; [EXECUTE: START_SESSION]</>
+            )}
+          </button>
+          </div>
+        )}
 
         <Footer />
       </div>

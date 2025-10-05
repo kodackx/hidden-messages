@@ -6,12 +6,14 @@ import { toast } from 'sonner';
 
 interface SessionListProps {
   onResumeSession: (sessionId: string) => void;
+  isResuming?: boolean;
 }
 
-export default function SessionList({ onResumeSession }: SessionListProps) {
+export default function SessionList({ onResumeSession, isResuming = false }: SessionListProps) {
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     loadSessions();
@@ -49,6 +51,7 @@ export default function SessionList({ onResumeSession }: SessionListProps) {
   };
 
   const handleResumeClick = (sessionId: string) => {
+    setResumingSessionId(sessionId);
     onResumeSession(sessionId);
   };
 
@@ -91,11 +94,15 @@ export default function SessionList({ onResumeSession }: SessionListProps) {
       </div>
 
       <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar">
-        {sessions.map((session) => (
+        {sessions.map((session) => {
+          const isThisSessionResuming = resumingSessionId === session.session_id;
+          return (
           <div
             key={session.session_id}
-            className="border border-muted p-3 hover:border-terminal-green-dim transition-all group cursor-pointer"
-            onClick={() => handleResumeClick(session.session_id)}
+            className={`border border-muted p-3 transition-all group ${
+              isResuming && !isThisSessionResuming ? 'opacity-50 cursor-not-allowed' : 'hover:border-terminal-green-dim cursor-pointer'
+            }`}
+            onClick={() => !isResuming && handleResumeClick(session.session_id)}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
@@ -139,17 +146,40 @@ export default function SessionList({ onResumeSession }: SessionListProps) {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleResumeClick(session.session_id);
+                  if (!isResuming) handleResumeClick(session.session_id);
                 }}
-                className="flex items-center gap-1 px-2 py-1 border border-terminal-green-dim text-terminal-green-dim hover:bg-terminal-green-dim/10 transition-colors text-xs uppercase opacity-0 group-hover:opacity-100"
+                disabled={isResuming}
+                className="flex items-center gap-1 px-2 py-1 border border-terminal-green-dim text-terminal-green-dim hover:bg-terminal-green-dim/10 transition-colors text-xs uppercase opacity-0 group-hover:opacity-100 disabled:opacity-50"
               >
-                <Play size={12} />
-                <span>RESUME</span>
+                {isThisSessionResuming ? (
+                  <>
+                    <span className="cursor-blink">LOADING</span>
+                  </>
+                ) : (
+                  <>
+                    <Play size={12} />
+                    <span>RESUME</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
+      
+      {/* Loading Overlay */}
+      {isResuming && resumingSessionId && (
+        <div className="mt-4 border border-terminal-green p-4 bg-terminal-green/5 animate-pulse">
+          <div className="flex items-center justify-center gap-2 text-terminal-glow uppercase tracking-wide text-sm">
+            <span>&gt;&gt;&gt; LOADING SESSION DATA</span>
+            <span className="cursor-blink">_</span>
+          </div>
+          <p className="text-center text-xs text-terminal-green-dim mt-2 uppercase">
+            PLEASE WAIT, DO NOT NAVIGATE AWAY
+          </p>
+        </div>
+      )}
     </div>
   );
 }

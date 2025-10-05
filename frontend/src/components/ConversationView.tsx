@@ -5,7 +5,7 @@ import ParticipantList from './ParticipantList';
 import GameStatus from './GameStatus';
 
 import Footer from './Footer';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Home, Users } from 'lucide-react';
 import { APP_VERSION } from '@/lib/constants';
 
 interface ConversationViewProps {
@@ -14,6 +14,7 @@ interface ConversationViewProps {
   participants: ParticipantInfo[];
   onNewSession: () => void;
   onViewHistory: () => void;
+  onGoHome: () => void;
 }
 
 interface TurnData {
@@ -28,6 +29,7 @@ export default function ConversationView({
   participants,
   onNewSession,
   onViewHistory,
+  onGoHome,
 }: ConversationViewProps) {
   const [turns, setTurns] = useState<TurnData[]>([]);
   const [showThoughts, setShowThoughts] = useState(false);
@@ -36,6 +38,8 @@ export default function ConversationView({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [triesRemaining, setTriesRemaining] = useState<Record<string, number>>({});
+  const [secretWord, setSecretWord] = useState<string | null>(null);
+  const [showAgentDetails, setShowAgentDetails] = useState(false);
   const conversationEndRef = useRef<HTMLDivElement>(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
@@ -50,6 +54,8 @@ export default function ConversationView({
         
         // Group messages by turn
         const turnMap = new Map<number, TurnData>();
+
+        setSecretWord(history.secret_word || null);
         
         history.messages.forEach(msg => {
           if (!turnMap.has(msg.turn)) {
@@ -98,6 +104,7 @@ export default function ConversationView({
           setTriesRemaining({ [receiver.id]: 3 });
         }
         setHistoryLoaded(true);
+        setSecretWord(null);
       }
     };
     
@@ -159,15 +166,42 @@ export default function ConversationView({
                 <span className="text-muted-foreground uppercase">TOPIC:</span>{' '}
                 <span className="text-primary">{topic}</span>
               </p>
+              {showThoughts && secretWord && (
+                <p className="text-xs mt-1">
+                  <span className="text-muted-foreground uppercase">SECRET WORD:</span>{' '}
+                  <span className="text-system-glow uppercase">{secretWord}</span>
+                </p>
+              )}
             </div>
-            <button
-              onClick={() => setShowThoughts(!showThoughts)}
-              className={`terminal-button flex items-center gap-2 ${showThoughts ? 'bg-primary text-background' : ''}`}
-            >
-              {showThoughts ? <Eye size={16} /> : <EyeOff size={16} />}
-              REVEAL_THOUGHTS:{showThoughts ? '▓' : '░'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onGoHome}
+                className="terminal-button flex items-center gap-2"
+              >
+                <Home size={16} />
+                HOME
+              </button>
+              <button
+                onClick={() => setShowAgentDetails(!showAgentDetails)}
+                className={`terminal-button flex items-center gap-2 ${showAgentDetails ? 'bg-system text-background' : ''}`}
+              >
+                <Users size={16} />
+                AGENT_DETAILS
+              </button>
+              <button
+                onClick={() => setShowThoughts(!showThoughts)}
+                className={`terminal-button flex items-center gap-2 ${showThoughts ? 'bg-primary text-background' : ''}`}
+              >
+                {showThoughts ? <Eye size={16} /> : <EyeOff size={16} />}
+                REVEAL_THOUGHTS:{showThoughts ? '▓' : '░'}
+              </button>
+            </div>
           </div>
+          {showAgentDetails && (
+            <div className="mt-4 border-t border-muted pt-4">
+              <ParticipantList participants={participants} triesRemaining={triesRemaining} compact />
+            </div>
+          )}
         </div>
 
         {/* Error Display */}
@@ -202,24 +236,21 @@ export default function ConversationView({
             </div>
           </div>
         )}
-
-        {/* Participants */}
-        <ParticipantList participants={participants} triesRemaining={triesRemaining} />
-
         {/* Conversation */}
-        <div className="terminal-panel">
+        <div className={`terminal-panel transition-opacity ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
           <div className="text-sm uppercase tracking-wide mb-4 text-terminal-glow">
             &gt;&gt; CONVERSATION.LOG
+            {isLoading && <span className="ml-2 cursor-blink text-xs">PROCESSING_TURN...</span>}
           </div>
 
           {turns.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              <p className="uppercase text-sm">AWAITING_INPUT...</p>
-              <p className="text-xs mt-2">Execute NEXT_TURN to begin conversation</p>
+              <p className="uppercase text-sm">Standing by for agent chatter.</p>
+              <p className="text-xs mt-2">Trigger NEXT_TURN to engage the agents.</p>
               <span className="inline-block mt-2 cursor-blink">█</span>
             </div>
           ) : (
-            <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
+            <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
               {turns.map((turn) => (
                 <div key={turn.turnNumber} className="space-y-3">
                   <div className="text-xs text-muted-foreground uppercase border-b border-muted pb-1">

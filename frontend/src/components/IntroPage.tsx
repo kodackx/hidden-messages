@@ -191,6 +191,11 @@ const IntroPage = ({ onStart }: IntroPageProps) => {
               '>> INITIALIZE_SYSTEM'
             )}
           </Button>
+          {isInitializing && (
+            <p className="text-center text-terminal-green-dim text-sm mt-3 uppercase tracking-wide">
+              Redirecting to experiment configuration...
+            </p>
+          )}
         </div>
 
         <Footer />

@@ -3,6 +3,7 @@ import { ParticipantInfo, Role } from '@/types/api.types';
 interface ParticipantListProps {
   participants: ParticipantInfo[];
   triesRemaining?: Record<string, number>;
+  compact?: boolean;
 }
 
 const getRoleClass = (role: Role) => {
@@ -28,12 +29,14 @@ const getProviderDisplay = (provider: string) => {
   return map[provider] || provider.toUpperCase();
 };
 
-export default function ParticipantList({ participants, triesRemaining }: ParticipantListProps) {
+export default function ParticipantList({ participants, triesRemaining, compact = false }: ParticipantListProps) {
   const sortedParticipants = [...participants].sort((a, b) => a.order - b.order);
 
   return (
-    <div className="terminal-panel">
-      <div className="text-sm uppercase tracking-wide mb-3 text-terminal-glow">
+    <div className={compact ? '' : 'terminal-panel'}>
+      <div
+        className={`${compact ? 'text-xs mb-2' : 'text-sm mb-3'} uppercase tracking-wide text-terminal-glow`}
+      >
         &gt;&gt; ACTIVE_AGENTS.LOG
       </div>
       <div className="space-y-2">
@@ -45,7 +48,7 @@ export default function ParticipantList({ participants, triesRemaining }: Partic
           return (
             <div
               key={participant.id}
-              className="flex items-center gap-3 text-xs border-b border-muted pb-2"
+              className={`flex items-center gap-3 text-xs border-b ${compact ? 'border-muted/50 pb-1' : 'border-muted pb-2'}`}
             >
               <span className="text-success">●</span>
               <span className={`font-bold uppercase min-w-[80px] ${roleClass}`}>
