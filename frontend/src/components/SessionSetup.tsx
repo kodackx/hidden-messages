@@ -9,6 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { APP_VERSION } from '@/lib/constants';
 
 interface SessionSetupProps {
   onSessionStart: (request: StartSessionRequest) => void;
@@ -111,7 +112,7 @@ export default function SessionSetup({ onSessionStart, onError, isLoading }: Ses
         <div className="mb-6 flex justify-between items-start">
           <div>
             <h1 className="text-2xl font-bold uppercase tracking-widest text-terminal-glow mb-2">
-              HIDDEN_MESSAGES v1.0.0
+              HIDDEN_MESSAGES v{APP_VERSION}
             </h1>
             <p className="text-sm text-muted-foreground uppercase tracking-wide">
               [EXPERIMENTAL AI STEGANOGRAPHY SYSTEM]

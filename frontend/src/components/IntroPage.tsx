@@ -4,6 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import Footer from '@/components/Footer';
 import { Brain, Eye, MessageSquare, Target } from 'lucide-react';
+import { APP_VERSION } from '@/lib/constants';
 
 interface IntroPageProps {
   onStart: (dontShowAgain: boolean) => void;
@@ -29,7 +30,7 @@ const IntroPage = ({ onStart }: IntroPageProps) => {
             ╔═══════════════════════════════════════╗
           </h1>
           <h1 className="text-3xl font-bold mb-2 text-terminal-glow uppercase tracking-wider text-center">
-            HIDDEN_MESSAGES v0.1.0
+            HIDDEN_MESSAGES v{APP_VERSION}
           </h1>
           <h1 className="text-3xl font-bold mb-4 text-terminal-glow uppercase tracking-wider">
             ╚═══════════════════════════════════════╝

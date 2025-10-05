@@ -6,6 +6,7 @@ import GameStatus from './GameStatus';
 
 import Footer from './Footer';
 import { Eye, EyeOff } from 'lucide-react';
+import { APP_VERSION } from '@/lib/constants';
 
 interface ConversationViewProps {
   sessionId: string;
@@ -94,7 +95,7 @@ export default function ConversationView({
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-xl font-bold uppercase tracking-widest text-terminal-glow">
-                HIDDEN_MESSAGES v1.0.0
+                HIDDEN_MESSAGES v{APP_VERSION}
               </h1>
               <p className="text-sm mt-1">
                 <span className="text-muted-foreground uppercase">TOPIC:</span>{' '}

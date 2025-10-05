@@ -1,6 +1,5 @@
 import { getApiMode } from '@/services/api';
-
-const APP_VERSION = '0.1.0';
+import { APP_VERSION } from '@/lib/constants';
 
 const Footer = () => {
   const apiMode = getApiMode();
