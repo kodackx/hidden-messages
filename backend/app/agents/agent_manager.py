@@ -25,7 +25,7 @@ class HiddenMessageAgent:
 
     def __init__(self):
         self.agents: Dict[str, Agent[AgentOutput]] = {}
-        self.model_settings = ModelSettings(temperature=0.3, max_tokens=2000)
+        self.model_settings = ModelSettings(temperature=0.3, max_tokens=8192)
         self.agent_meta: Dict[str, Dict[str, str]] = {}
         self.logger = get_logger("agents.manager")
 

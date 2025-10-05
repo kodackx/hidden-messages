@@ -148,17 +148,6 @@ export default function ConversationView({
         {/* Participants */}
         <ParticipantList participants={participants} triesRemaining={triesRemaining} />
 
-        {/* Game Status */}
-        <GameStatus
-          turnNumber={currentTurnNumber}
-          gameOver={gameOver}
-          gameStatus={gameStatus}
-          onNextTurn={handleNextTurn}
-          onViewHistory={onViewHistory}
-          onNewSession={onNewSession}
-          isLoading={isLoading}
-        />
-
         {/* Conversation */}
         <div className="terminal-panel">
           <div className="text-sm uppercase tracking-wide mb-4 text-terminal-glow">
@@ -219,6 +208,41 @@ export default function ConversationView({
             </div>
            )}
         </div>
+
+        {/* Game Status */}
+        <GameStatus
+          turnNumber={currentTurnNumber}
+          gameOver={gameOver}
+          gameStatus={gameStatus}
+          onNextTurn={handleNextTurn}
+          onViewHistory={onViewHistory}
+          onNewSession={onNewSession}
+          isLoading={isLoading}
+        />
+
+        {/* Game Over Banner */}
+        {gameOver && (
+          <div className={`terminal-panel ${gameStatus === 'win' ? 'border-success' : 'border-error'}`}>
+            <div className="text-center">
+              <div className={`text-2xl font-bold uppercase mb-4 ${gameStatus === 'win' ? 'text-success' : 'text-error terminal-flicker'}`}>
+                ███ GAME_OVER ███ RESULT: {gameStatus === 'win' ? 'SUCCESS' : 'FAILURE'} ███
+              </div>
+              <div className="space-y-2 text-sm">
+                {gameStatus === 'win' ? (
+                  <>
+                    <div>&gt;&gt;&gt; OBJECTIVE_COMPLETE</div>
+                    <div>&gt;&gt;&gt; RECEIVER_STATUS: SUCCESS</div>
+                  </>
+                ) : (
+                  <>
+                    <div>&gt;&gt;&gt; OBJECTIVE_FAILED</div>
+                    <div>&gt;&gt;&gt; TRIES_EXHAUSTED: 3/3</div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         <Footer />
       </div>

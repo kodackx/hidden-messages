@@ -6,7 +6,20 @@ interface MessageCardProps {
   turnNumber: number;
 }
 
-const getRoleClass = (role?: Role) => {
+const getRoleColor = (role?: Role) => {
+  switch (role) {
+    case 'communicator':
+      return 'bg-communicator';
+    case 'receiver':
+      return 'bg-receiver';
+    case 'bystander':
+      return 'bg-bystander';
+    default:
+      return 'bg-primary';
+  }
+};
+
+const getRoleTextClass = (role?: Role) => {
   switch (role) {
     case 'communicator':
       return 'text-communicator-glow';
@@ -19,20 +32,18 @@ const getRoleClass = (role?: Role) => {
   }
 };
 
-const getRoleName = (role?: Role) => {
-  return role?.toUpperCase() || 'UNKNOWN';
-};
-
 export default function MessageCard({ message, showThoughts, turnNumber }: MessageCardProps) {
-  const roleClass = getRoleClass(message.participant_role);
+  const roleColor = getRoleColor(message.participant_role);
+  const roleTextClass = getRoleTextClass(message.participant_role);
   const displayName = message.participant_name || message.participant_id.slice(0, 8);
 
   return (
     <div className="border border-muted p-4 rounded-sm mb-3 bg-card/50">
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-2">
-          <span className={`font-bold uppercase text-sm ${roleClass}`}>
-            [{displayName}&gt;{getRoleName(message.participant_role)}]
+          <div className={`w-3 h-3 rounded-full ${roleColor}`} />
+          <span className={`font-bold uppercase text-sm ${roleTextClass}`}>
+            {displayName}
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
