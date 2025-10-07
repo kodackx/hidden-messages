@@ -180,10 +180,10 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
         {/* Divider */}
         <div className="relative my-10">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t-2 border-terminal-green-dim"></div>
+            <div className="w-full border-t-2 border-[hsl(var(--communicator))]/40"></div>
           </div>
           <div className="relative flex justify-center">
-            <span className="bg-terminal-bg px-6 text-terminal-green uppercase text-sm tracking-widest">
+            <span className="px-6 text-communicator-glow uppercase text-sm tracking-widest bg-transparent">
               ─── OR ───
             </span>
           </div>
@@ -214,10 +214,10 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
 
         {showNewExperiment && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
-          <div className={`space-y-6 ${actionLocked ? 'opacity-60 pointer-events-none' : ''}`}>
+          <div className={`terminal-panel space-y-6 border-[hsl(var(--communicator))]/40 bg-[hsl(var(--communicator))]/5 ${actionLocked ? 'opacity-60 pointer-events-none' : ''}`}>
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <label className="block text-sm uppercase tracking-wide text-terminal-glow">
+              <label className="block text-sm uppercase tracking-wide text-communicator-glow">
                 &gt; CONVERSATION_TOPIC:
               </label>
               <Tooltip>
@@ -242,7 +242,7 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
 
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <label className="block text-sm uppercase tracking-wide text-terminal-glow">
+              <label className="block text-sm uppercase tracking-wide text-communicator-glow">
                 &gt; SECRET_WORD (NULL=RANDOM):
               </label>
               <Tooltip>
@@ -265,10 +265,10 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
             />
           </div>
 
-          <div className="terminal-panel">
+          <div className="terminal-panel border-[hsl(var(--communicator))]/40 bg-[hsl(var(--communicator))]/5">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
-                <h2 className="text-lg uppercase tracking-wide text-terminal-glow">
+                <h2 className="text-lg uppercase tracking-wide text-communicator-glow">
                   &gt;&gt; AGENT_CONFIG.SYS
                 </h2>
                 <Tooltip>
@@ -284,7 +284,7 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
 
             <div className="space-y-4">
               {participants.map((participant, index) => (
-                <div key={index} className="border border-muted p-4 rounded-sm">
+                <div key={index} className="border border-[hsl(var(--communicator))]/30 bg-[hsl(var(--communicator))]/5 p-4 rounded-sm">
                   <div className="flex justify-between items-start mb-3">
                     <span className="text-sm text-communicator-glow font-bold">
                       [{String(index + 1).padStart(2, '0')}] AGENT_{String.fromCharCode(65 + index)}
@@ -403,7 +403,7 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
 
               <button
                 onClick={addParticipant}
-                className="terminal-button w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="terminal-button w-full flex items-center justify-center gap-2 text-[hsl(var(--communicator))] border-[hsl(var(--communicator))] hover:bg-[hsl(var(--communicator))] hover:text-[hsl(var(--terminal-bg))] disabled:opacity-60 disabled:cursor-not-allowed"
                 disabled={actionLocked}
               >
                 <Plus size={16} />
@@ -412,22 +412,22 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
             </div>
           </div>
 
-          <div className="border border-terminal-green-dim/30 p-4 bg-terminal-bg-light/50">
-            <div className="text-xs uppercase tracking-wider text-terminal-green-dim space-y-1">
+          <div className="border border-[hsl(var(--communicator))]/40 bg-[hsl(var(--communicator))]/5 p-4">
+            <div className="text-xs uppercase tracking-wider text-[hsl(var(--communicator))] space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-communicator-glow">&gt;</span>
                 <span>TOPIC:</span>
-                <span className="text-terminal-green truncate flex-1">{topic || '(not set)'}</span>
+                <span className="truncate flex-1">{topic || '(not set)'}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-receiver-glow">&gt;</span>
+                <span className="text-communicator-glow">&gt;</span>
                 <span>SECRET:</span>
-                <span className="text-terminal-green">{secretWord || 'RANDOM'}</span>
+                <span>{secretWord || 'RANDOM'}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-system-glow">&gt;</span>
+                <span className="text-communicator-glow">&gt;</span>
                 <span>AGENTS:</span>
-                <span className="text-terminal-green">{participants.length} configured</span>
+                <span>{participants.length} configured</span>
               </div>
             </div>
           </div>
@@ -435,19 +435,26 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
           <button
             onClick={validateAndSubmit}
             disabled={actionLocked}
-            className={`terminal-button-accent w-full py-4 text-lg font-bold transition-transform disabled:opacity-100 disabled:cursor-not-allowed ${actionLocked ? '' : 'animate-pulse hover:animate-none hover:scale-[1.02]'}`}
+            className={`terminal-button-accent w-full py-4 text-lg font-bold transition-transform disabled:opacity-100 disabled:cursor-not-allowed flex items-center justify-center ${
+              actionLocked ? '' : 'animate-pulse hover:animate-none hover:scale-[1.02]'
+            } ${(isLoading || isStarting) ? 'flex-col items-start gap-3 px-6 text-left bg-[hsl(var(--communicator))] text-[hsl(var(--terminal-bg))]' : ''}`}
           >
-            {isLoading ? (
-              <>INITIALIZING<span className="cursor-blink">_</span></>
-            ) : isStarting ? (
-              <span className="flex flex-col items-center gap-2 text-terminal-bg">
-                <span className="inline-flex items-center gap-2">
-                  &gt;&gt;&gt;<span className="animate-pulse">INITIALIZING</span>&gt;&gt;&gt;
-                </span>
-                <span className="text-xs uppercase tracking-wide opacity-80">
-                  Stand by while we initialize the conversation
-                </span>
-              </span>
+            {(isLoading || isStarting) ? (
+              <div className="w-full space-y-2">
+                <div className="flex items-center justify-between text-xs tracking-widest">
+                  <span>&gt;&gt;&gt; START_SESSION</span>
+                  <span>{topic ? topic.slice(0, 18) + (topic.length > 18 ? '…' : '') : 'NO_TOPIC'}</span>
+                </div>
+                <div className="flex flex-col gap-1 text-sm font-normal">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="animate-pulse">{isLoading ? 'CONTACTING' : 'INITIALIZING'}</span>
+                    <span>hidden_messages start --prepare</span>
+                  </span>
+                  <span className="text-xs uppercase tracking-wide">
+                    {isLoading ? 'Waiting for API response' : 'Spinning up agents and payloads'}
+                  </span>
+                </div>
+              </div>
             ) : (
               <>&gt; [EXECUTE: START_SESSION]</>
             )}

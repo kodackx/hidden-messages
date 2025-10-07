@@ -96,9 +96,9 @@ export default function SessionList({ onResumeSession, isResuming = false }: Ses
   }
 
   return (
-    <div className="terminal-panel mb-6">
+    <div className="terminal-panel mb-6 border-[hsl(var(--receiver))]/50 bg-[hsl(var(--receiver))]/5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg uppercase tracking-wide text-terminal-glow">
+        <h2 className="text-lg uppercase tracking-wide text-receiver-glow">
           &gt;&gt; PREVIOUS_SESSIONS
         </h2>
         <span className="text-xs text-muted-foreground uppercase">
@@ -114,16 +114,20 @@ export default function SessionList({ onResumeSession, isResuming = false }: Ses
           <div
             key={session.session_id}
             className={`border p-3 transition-all group ${
-              isSelected ? 'border-terminal-green bg-terminal-green/5' : 'border-muted'
+              isSelected
+                ? 'border-[hsl(var(--receiver))] bg-[hsl(var(--receiver))]/10 shadow-[0_0_12px_hsla(var(--receiver),0.25)]'
+                : 'border-[hsl(var(--receiver))]/30 bg-transparent'
             } ${
-              isResuming && !isThisSessionResuming ? 'opacity-50 cursor-not-allowed' : 'hover:border-terminal-green-dim cursor-pointer'
+              isResuming && !isThisSessionResuming
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:border-[hsl(var(--receiver))] hover:bg-[hsl(var(--receiver))]/10 cursor-pointer'
             }`}
             onClick={() => handleSessionSelect(session.session_id)}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-sm font-bold text-terminal-green truncate">
+                  <h3 className="text-sm font-bold text-[hsl(var(--receiver))] truncate">
                     {session.topic}
                   </h3>
                   {session.game_over && (
@@ -136,7 +140,7 @@ export default function SessionList({ onResumeSession, isResuming = false }: Ses
                     </span>
                   )}
                   {!session.game_over && (
-                    <span className="text-xs px-1.5 py-0.5 border border-system text-system-glow">
+                    <span className="text-xs px-1.5 py-0.5 border border-[hsl(var(--receiver))]/70 text-[hsl(var(--receiver))]">
                       IN PROGRESS
                     </span>
                   )}
@@ -159,12 +163,12 @@ export default function SessionList({ onResumeSession, isResuming = false }: Ses
                 </div>
               </div>
               {isSelected && !isResuming && (
-                <span className="text-xs px-2 py-1 border border-terminal-green text-terminal-green uppercase tracking-wide">
+                <span className="text-xs px-2 py-1 border border-[hsl(var(--receiver))] text-[hsl(var(--receiver))] uppercase tracking-wide">
                   SELECTED
                 </span>
               )}
               {isThisSessionResuming && (
-                <span className="text-xs px-2 py-1 border border-terminal-green-dim text-terminal-green-dim uppercase tracking-wide animate-pulse">
+                <span className="text-xs px-2 py-1 border border-[hsl(var(--receiver))] text-[hsl(var(--receiver))] uppercase tracking-wide animate-pulse">
                   RESUMING
                 </span>
               )}
@@ -179,39 +183,28 @@ export default function SessionList({ onResumeSession, isResuming = false }: Ses
         disabled={!selectedSessionId || isResuming}
         className={`terminal-button-receiver w-full mt-4 py-4 text-lg font-bold uppercase tracking-wide transition-transform disabled:opacity-100 disabled:cursor-not-allowed flex items-center justify-center ${
           !selectedSessionId || isResuming ? '' : 'animate-pulse hover:animate-none hover:scale-[1.02]'
-        }`}
+        } ${isResuming && resumingSessionId ? 'flex-col gap-3 items-start px-6 text-left bg-[hsl(var(--receiver))] text-[hsl(var(--terminal-bg))]' : ''}`}
       >
         {isResuming && resumingSessionId ? (
-          <span className="flex flex-col items-center gap-2 text-terminal-bg">
-            <span className="inline-flex items-center gap-2">
-              &gt;&gt;&gt;
-              <span className="animate-pulse">RESUMING SESSION</span>
-              &gt;&gt;&gt;
-            </span>
-            <span className="text-xs uppercase tracking-wide opacity-80">
-              Stand by while we resume the conversation
-            </span>
-          </span>
+          <div className="w-full space-y-2">
+            <div className="flex items-center justify-between text-xs tracking-widest">
+              <span>&gt;&gt;&gt; RESUME_SESSION</span>
+              <span>ID {resumingSessionId.slice(0, 8)}...</span>
+            </div>
+            <div className="flex flex-col gap-1 text-sm font-normal">
+              <span className="inline-flex items-center gap-2">
+                <span className="animate-pulse">RUNNING</span>
+                <span>hidden_messages resume --wait</span>
+              </span>
+              <span className="text-xs uppercase tracking-wide">
+                Stand by while we load the conversation
+              </span>
+            </div>
+          </div>
         ) : (
           <>&gt; [EXECUTE: RESUME_SESSION]</>
         )}
       </button>
-      
-      {/* Loading Overlay */}
-      {isResuming && resumingSessionId && (
-        <div className="mt-4 border border-terminal-green-dim/40 bg-terminal-bg-light/60 p-4">
-          <div className="flex flex-col items-center gap-2 text-terminal-glow uppercase tracking-wide text-sm">
-            <span className="inline-flex items-center gap-2">
-              &gt;&gt;&gt;
-              <span className="animate-pulse">LOADING SESSION</span>
-              &gt;&gt;&gt;
-            </span>
-            <span className="text-xs text-terminal-green-dim tracking-wide">
-              Stand by while we load the conversation
-            </span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
