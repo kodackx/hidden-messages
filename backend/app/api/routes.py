@@ -175,6 +175,32 @@ async def next_turn(
 
     session_state = active_sessions[request.session_id]
 
+    # If the in-memory history is empty (e.g., after resume), repopulate from DB for accuracy
+    if not session_state.conversation_history:
+        try:
+            history_result = await db.execute(
+                select(MessageModel)
+                .where(MessageModel.session_id == request.session_id)
+                .order_by(MessageModel.turn.asc(), MessageModel.id.asc())
+            )
+            history_messages = list(history_result.scalars())
+            if history_messages:
+                participant_lookup = {p.get("id"): p for p in session_state.participants}
+                session_state.conversation_history = [
+                    {
+                        "participant_id": message.participant_id,
+                        "comms": message.comms,
+                        "participant_name": (participant_lookup.get(message.participant_id) or {}).get("name"),
+                    }
+                    for message in history_messages
+                ]
+        except Exception as hydrate_err:
+            logger.warning(
+                "Failed to repopulate conversation history for session %s: %s",
+                request.session_id,
+                hydrate_err,
+            )
+
     expected_participants = {p["id"] for p in session_state.participants}
     cached_participants = set(agent_manager.agents.keys())
     if not expected_participants.issubset(cached_participants):

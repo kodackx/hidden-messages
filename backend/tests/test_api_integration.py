@@ -7,6 +7,8 @@ from uuid import UUID
 
 from app.main import app
 from app.models import SessionModel, MessageModel, GuessModel
+from app.api.session_state import SessionState, active_sessions
+from app.api.routes import agent_manager
 from app.agents.schemas import AgentOutput
 
 
@@ -162,6 +164,89 @@ class TestNextTurnEndpoint:
         
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
+
+    @pytest.mark.asyncio
+    async def test_next_turn_rehydrates_missing_history(self, client, db_session, sample_session_data):
+        """Ensure a resumed session repopulates history before invoking agents"""
+        # Persist session and prior messages
+        session = SessionModel(
+            topic=sample_session_data["topic"],
+            secret_word=sample_session_data["secret_word"],
+            participants={
+                p["id"]: {
+                    "provider": p["provider"],
+                    "role": p["role"],
+                    "name": p["name"],
+                }
+                for p in sample_session_data["participants"]
+            },
+        )
+        db_session.add(session)
+        await db_session.commit()
+        await db_session.refresh(session)
+
+        prior_messages = [
+            MessageModel(
+                session_id=session.id,
+                turn=1,
+                participant_id=sample_session_data["participants"][0]["id"],
+                comms="First turn opener",
+                internal_thoughts="thinking",
+            ),
+            MessageModel(
+                session_id=session.id,
+                turn=2,
+                participant_id=sample_session_data["participants"][1]["id"],
+                comms="Second turn follow-up",
+                internal_thoughts="pondering",
+            ),
+        ]
+        db_session.add_all(prior_messages)
+        await db_session.commit()
+
+        # Simulate in-memory state missing history
+        active_sessions.pop(session.id, None)
+        tries_remaining = {
+            p["id"]: 3 for p in sample_session_data["participants"] if p["role"] == "receiver"
+        }
+        active_sessions[session.id] = SessionState(
+            session_id=session.id,
+            topic=session.topic,
+            secret_word=session.secret_word,
+            participants=sample_session_data["participants"],
+            conversation_history=[],
+            turn_number=3,
+            tries_remaining=tries_remaining,
+        )
+
+        async_mock = AsyncMock(return_value={
+            "messages": [
+                {
+                    "participant_id": sample_session_data["participants"][0]["id"],
+                    "comms": "New contribution",
+                    "internal_thoughts": "continuing",
+                    "guess": None,
+                }
+            ],
+            "errors": [],
+        })
+
+        try:
+            with patch.object(agent_manager, "run_conversation_turn", async_mock):
+                response = await client.post(
+                    "/api/next-turn",
+                    json={"session_id": str(session.id)}
+                )
+
+            assert response.status_code == 200
+            history_passed = async_mock.await_args.kwargs["conversation_history"]
+            assert history_passed, "Expected prior messages to be provided to the agent"
+            assert history_passed[0]["comms"] == "First turn opener"
+            assert history_passed[1]["comms"] == "Second turn follow-up"
+        finally:
+            active_sessions.pop(session.id, None)
+            agent_manager.agents.clear()
+            agent_manager.agent_meta.clear()
 
     @pytest.mark.asyncio
     async def test_next_turn_success(self, client, db_session, sample_session_data):

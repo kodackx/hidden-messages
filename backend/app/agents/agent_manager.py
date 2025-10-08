@@ -452,7 +452,7 @@ class HiddenMessageAgent:
             key=lambda p: (p.get("order", role_priority.get(p["role"], 99)), role_priority.get(p["role"], 99))
         )
 
-        history = conversation_history
+        history = list(conversation_history)
 
         for p in ordered:
             participant_id = p["id"]
@@ -505,6 +505,12 @@ class HiddenMessageAgent:
                 "internal_thoughts": response.internal_thoughts,
                 "comms": response.comms,
                 "guess": response.guess if role == "receiver" else None,
+            })
+
+            history.append({
+                "participant_id": participant_id,
+                "participant_name": display_name,
+                "comms": response.comms,
             })
 
         # Log summary of the conversation turn
