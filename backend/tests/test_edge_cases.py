@@ -2,6 +2,7 @@
 import pytest
 from unittest.mock import AsyncMock, Mock, patch
 import json
+from uuid import uuid4
 
 from app.agents.agent_manager import HiddenMessageAgent
 from app.agents.schemas import AgentOutput, AgentContext
@@ -373,6 +374,7 @@ class TestErrorRecovery:
         }
         
         result = await manager.run_conversation_turn(
+            session_id=uuid4(),
             topic="test",
             secret_word="test",
             conversation_history=[],

@@ -386,6 +386,7 @@ class TestConversationTurn:
             manager.agent_meta[p["id"]] = {"provider": "openai", "role": p["role"]}
         
         result = await manager.run_conversation_turn(
+            session_id=uuid4(),
             topic="test topic",
             secret_word="horizon",
             conversation_history=[],
@@ -434,6 +435,7 @@ class TestConversationTurn:
         }
         
         result = await manager.run_conversation_turn(
+            session_id=uuid4(),
             topic="test topic",
             secret_word="horizon",
             conversation_history=[],
@@ -475,6 +477,7 @@ class TestConversationTurn:
         }
         
         result = await manager.run_conversation_turn(
+            session_id=uuid4(),
             topic="test topic",
             secret_word="horizon",
             conversation_history=[],
@@ -516,6 +519,7 @@ class TestConversationTurn:
             manager.agent_meta[p["id"]] = {"provider": "openai", "role": p["role"]}
         
         result = await manager.run_conversation_turn(
+            session_id=uuid4(),
             topic="test",
             secret_word="test",
             conversation_history=[],

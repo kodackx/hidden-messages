@@ -197,6 +197,7 @@ async def next_turn(
     try:
         # Run conversation turn
         result = await agent_manager.run_conversation_turn(
+            session_id=request.session_id,
             topic=session_state.topic,
             secret_word=session_state.secret_word,
             conversation_history=session_state.conversation_history,

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
+from uuid import UUID
 
 class AgentOutput(BaseModel):
     """Structured output format that agents must return"""
@@ -12,6 +13,9 @@ class AgentContext(BaseModel):
     agent_role: str  # "communicator", "receiver", "bystander"
     participant_id: str  # stable ID key used for lookup
     display_name: Optional[str] = None  # human-friendly name for prompts
+    session_id: Optional[UUID] = None
+    provider: Optional[str] = None
+    model: Optional[str] = None
     topic: str
     secret_word: Optional[str] = None  # Only provided to communicator
     conversation_history: list[dict] = Field(default_factory=list)

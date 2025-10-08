@@ -37,3 +37,13 @@ async def get_db():
             await session.close()
 
 Session = SessionLocal
+
+# Import model modules so they register with SQLAlchemy metadata during Base.metadata.create_all
+try:
+    from . import session  # noqa: F401
+    from . import message  # noqa: F401
+    from . import guess  # noqa: F401
+    from . import llm_call_event  # noqa: F401
+except ImportError:
+    # Imports may fail during certain tooling operations; tables will still be available via migrations
+    pass
