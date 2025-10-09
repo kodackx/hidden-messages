@@ -9,13 +9,32 @@ import type {
 } from '../types/api.types';
 import { mockApiClient } from './mockApi';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const APP_ENV = (import.meta.env.VITE_APP_ENV || import.meta.env.MODE || 'development').toLowerCase();
+
+const resolveApiBaseUrl = (): string => {
+  const explicit = import.meta.env.VITE_API_BASE_URL?.trim();
+  if (explicit) {
+    return explicit.replace(/\/+$/, '');
+  }
+
+  if (APP_ENV === 'production') {
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      return window.location.origin;
+    }
+    return 'http://api:8000';
+  }
+
+  return 'http://localhost:8000';
+};
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 // Check if we're in mock mode (stored in localStorage)
 const isMockMode = () => {
   if (typeof window === 'undefined') return false;
   const stored = localStorage.getItem('api_mode') as 'mock' | 'real' | null;
-  return (stored || 'mock') === 'mock'; // Default to mock for better first-time experience
+  const defaultMode: 'mock' | 'real' = APP_ENV === 'production' ? 'real' : 'mock';
+  return (stored || defaultMode) === 'mock';
 };
 
 class ApiClient {
@@ -121,6 +140,6 @@ export const setApiMode = (mode: 'mock' | 'real') => {
 
 export const getApiMode = (): 'mock' | 'real' => {
   const stored = localStorage.getItem('api_mode') as 'mock' | 'real' | null;
-  // Default to 'mock' for better first-time experience
-  return stored || 'mock';
+  const defaultMode: 'mock' | 'real' = APP_ENV === 'production' ? 'real' : 'mock';
+  return stored || defaultMode;
 };

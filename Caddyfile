@@ -2,7 +2,6 @@
   encode gzip
 
   route /api* {
-    uri strip_prefix /api
     reverse_proxy api:8000
   }
 
