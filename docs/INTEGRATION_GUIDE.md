@@ -11,7 +11,7 @@ This guide explains how to run the full Hidden Messages application stack with b
 ## Quick Start
 
 ### 1. Add Your API Keys
-Edit `.env.docker` in the root directory and add your API keys:
+Copy `.env.example` to `.env` in the root directory and add your API keys:
 ```bash
 OPENAI_API_KEY=sk-your-key-here
 ANTHROPIC_API_KEY=sk-ant-your-key-here
@@ -57,7 +57,7 @@ Once all services are running:
 ### Configuration Files
 
 #### Root Level
-- **`.env.docker`** - Backend environment variables for Docker
+- **`.env`** - Shared environment variables loaded by Docker Compose
 - **`docker-compose.yml`** - Orchestrates all three services
 
 #### Frontend (`./frontend/`)
@@ -117,7 +117,7 @@ The backend is configured to accept requests from:
 - `http://localhost:5173` (Frontend dev server)
 - `http://localhost:3000` (Alternative frontend port)
 
-To add more origins, edit `ALLOWED_ORIGINS` in `.env.docker`.
+To add more origins, edit `ALLOWED_ORIGINS` in `.env`.
 
 ### Docker Network
 All services communicate within a Docker bridge network named `app`:

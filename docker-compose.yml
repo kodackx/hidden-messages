@@ -36,11 +36,7 @@ services:
   api:
     build: ./backend
     command: >
-      /bin/sh -c "if [ \"$APP_ENV\" = \"production\" ]; then
-        uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level ${LOG_LEVEL:-info};
-      else
-        uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level ${LOG_LEVEL:-debug};
-      fi"
+      /bin/sh -c "uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level ${LOG_LEVEL:-info}"
     env_file:
       - ./.env
     depends_on:
@@ -58,15 +54,8 @@ services:
       target: development
     env_file:
       - ./.env
-    environment:
-      - VITE_APP_ENV=${APP_ENV:-development}
-      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-}
     command: >
-      /bin/sh -c "if [ \"$APP_ENV\" = \"production\" ]; then
-        npm run build && npm run preview -- --host 0.0.0.0 --port 5173;
-      else
-        npm run dev -- --host 0.0.0.0 --port 5173;
-      fi"
+      /bin/sh -c "npm run build && npm run preview -- --host 0.0.0.0 --port 5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules

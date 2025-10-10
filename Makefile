@@ -2,8 +2,9 @@
 # Works with make (if installed) or can be run directly with commands
 
 PYTHON_VERSION = 3.12
+DOCKER_COMPOSE = docker compose
 
-.PHONY: help install dev run up down build clean test test-coverage test-unit \
+.PHONY: help install dev prod run up down build clean test test-coverage test-unit \
         test-integration test-verbose test-file test-fail-fast test-e2e test-no-e2e \
         migrate migrate-create shell-api shell-db shell-web logs logs-api logs-db logs-web \
         restart fresh health format lint test-api test-session env run-backend run-frontend \
@@ -14,8 +15,9 @@ help:
 	@echo "=== Hidden Messages - Full Stack Commands ==="
 	@echo ""
 	@echo "Quick Start:"
-	@echo "  make run        - Start full stack (frontend + backend + db) in Docker"
-	@echo "  make dev        - Same as 'make run' (alias for development)"
+	@echo "  make dev        - Start full stack for development (exposes 5173/8000)"
+	@echo "  make prod       - Start full stack in detached mode for production"
+	@echo "  make run        - Alias for 'make prod'"
 	@echo "  make down       - Stop all services"
 	@echo ""
 	@echo "Installation:"
@@ -76,19 +78,55 @@ install-frontend:
 	cd frontend && npm install
 
 # Run full stack (frontend + backend + database)
-run:
-	@echo "Starting full stack (frontend + backend + database) in detached mode..."
-	@echo "Frontend will be available at: http://localhost:5173"
-	@echo "Backend API will be available at: http://localhost:8000"
-	@echo "API Docs will be available at: http://localhost:8000/docs"
-	docker compose up --build -d
+run: prod
 
 dev:
-	@echo "Starting full stack (frontend + backend + database) interactively..."
-	@echo "Frontend will be available at: http://localhost:5173"
-	@echo "Backend API will be available at: http://localhost:8000"
-	@echo "API Docs will be available at: http://localhost:8000/docs"
-	docker compose up --build
+	@set -e; \
+	if command -v tput >/dev/null 2>&1; then \
+		BOLD=$$(tput bold); \
+		CYAN=$$(tput setaf 6); \
+		GREEN=$$(tput setaf 2); \
+		YELLOW=$$(tput setaf 3); \
+		BLUE=$$(tput setaf 4); \
+		RESET=$$(tput sgr0); \
+	else \
+		BOLD=""; CYAN=""; GREEN=""; YELLOW=""; BLUE=""; RESET=""; \
+	fi; \
+	printf '%b' "\n$${BOLD}$${CYAN}============================================$${RESET}\n"; \
+	printf '%b' "$${BOLD}$${CYAN}  Hidden Messages :: Development Stack  $${RESET}\n"; \
+	printf '%b' "$${BOLD}$${CYAN}============================================$${RESET}\n\n"; \
+	if [ ! -f .env ]; then \
+		printf '%b' "$${YELLOW}[WARNING] No .env file detected. Copying from .env.example...$${RESET}\n"; \
+		cp .env.example .env; \
+		printf '%b' "$${YELLOW}         Edit .env with your API keys before running live sessions.$${RESET}\n"; \
+	fi; \
+	missing_keys=""; \
+	if [ -f .env ]; then \
+		while IFS= read -r line; do \
+			case $$line in \
+				OPENAI_API_KEY=*|ANTHROPIC_API_KEY=*|GOOGLE_API_KEY=*) \
+					key=$${line%%=*}; \
+					value=$${line#*=}; \
+					[ -z "$$value" ] && missing_keys="$$missing_keys $$key"; \
+			;; \
+			esac; \
+		done < .env; \
+	fi; \
+	if [ -n "$$missing_keys" ]; then \
+		printf '%b' "$${YELLOW}[WARNING] Missing API keys detected:$$missing_keys$${RESET}\n"; \
+		printf '%b' "$${YELLOW}         Update .env so live LLM calls can succeed (mock mode still works).$${RESET}\n"; \
+	else \
+		printf '%b' "$${GREEN}[OK] API keys detected in .env -- live mode ready.$${RESET}\n"; \
+	fi; \
+	printf '%b' "\n$${BLUE}Frontend:$${RESET} http://localhost:5173\n"; \
+	printf '%b' "$${BLUE}Backend:$${RESET}  http://localhost:8000\n"; \
+	printf '%b' "$${BLUE}Docs:$${RESET}     http://localhost:8000/docs\n\n"
+	$(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+prod:
+	@echo "Starting full stack for production (detached, served via Caddy)..."
+	@echo "Public site: http://localhost"
+	$(DOCKER_COMPOSE) -f docker-compose.yml up --build -d
 
 # Run backend locally (without Docker)
 run-backend:

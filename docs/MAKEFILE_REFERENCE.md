@@ -4,14 +4,19 @@
 
 ### Run the Full Application
 ```bash
-make run         # Start frontend + backend + database (Docker)
-make dev         # Same as 'make run' (alias)
+make dev         # Development stack with hot reload + direct ports (5173/8000)
+make prod        # Production-style stack served via Caddy (port 80)
+make run         # Alias for 'make prod'
 ```
 
-After running, access:
+After `make dev`:
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
+
+After `make prod`:
+- **Public site**: http://localhost (proxied by Caddy)
+- **Backend API**: proxied via `/api` on the same origin
 
 ### Stop the Application
 ```bash
@@ -61,7 +66,8 @@ docker compose up db -d
 ## 🐳 Docker Commands
 
 ```bash
-make run         # Build and start all services (recommended)
+make prod        # Build and start the production stack (recommended)
+make run         # Alias for 'make prod'
 make up          # Start services without rebuilding
 make down        # Stop all services
 make build       # Build/rebuild Docker images
@@ -143,18 +149,19 @@ make test-session # Start a test session via API
 
 ### First Time Setup
 ```bash
-# 1. Add your API keys to .env.docker
-# 2. Start everything
-make run
+# 1. Add your API keys and production secrets to .env
+# 2. Start the development stack
+make dev
 
 # Wait for services to start, then access:
-# http://localhost:5173
+# Frontend: http://localhost:5173
+# Backend:  http://localhost:8000
 ```
 
 ### Daily Development
 ```bash
 # Start your day
-make run
+make dev
 
 # Make code changes (hot reload is enabled)
 # ...
@@ -215,11 +222,11 @@ make shell-api   # or shell-web, shell-db
 
 ---
 
-## Environment Files
+## Environment Configuration
 
-- **`.env.docker`** - Backend environment for Docker (add your API keys here)
-- **`frontend/.env.local`** - Frontend environment for local development
-- **`backend/.env.development`** - Backend environment for local development
+- **`.env`** – Single source of truth for runtime configuration (e.g., `APP_ENV`, `LOG_LEVEL`, `ALLOWED_ORIGINS`, `VITE_FORCE_MOCK_MODE`, `VITE_API_BASE_URL`, database URL, and API keys). `make dev` and `make prod` both load this file.
+- **`docker-compose.dev.yml`** – Overlay used by `make dev`; it adds local port mappings (5173/8000) and swaps in development commands (`npm run dev`, Uvicorn `--reload`) while configuration still comes from `.env`.
+- **Per-service overrides** – Only needed if you have advanced requirements; by default everything should live in `.env`.
 
 ---
 
@@ -245,13 +252,13 @@ docker compose restart db
 
 # Fresh database
 make clean
-make run
+make dev
 ```
 
 ### Frontend Not Connecting to Backend
 1. Check backend is running: `curl http://localhost:8000`
-2. Verify `VITE_API_BASE_URL` in `frontend/.env.local`
-3. Check CORS settings in backend
+2. If you are not using `make dev`, ensure the frontend points to the correct API base URL
+3. Check backend CORS settings (`ALLOWED_ORIGINS`)
 
 ### Tests Failing
 ```bash

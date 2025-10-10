@@ -10,6 +10,7 @@ import type {
 import { mockApiClient } from './mockApi';
 
 const APP_ENV = (import.meta.env.VITE_APP_ENV || import.meta.env.MODE || 'development').toLowerCase();
+const FORCE_MOCK_MODE = import.meta.env.VITE_FORCE_MOCK_MODE === 'true';
 
 const resolveApiBaseUrl = (): string => {
   const explicit = import.meta.env.VITE_API_BASE_URL?.trim();
@@ -31,6 +32,7 @@ const API_BASE_URL = resolveApiBaseUrl();
 
 // Check if we're in mock mode (stored in localStorage)
 const isMockMode = () => {
+  if (FORCE_MOCK_MODE) return true;
   if (typeof window === 'undefined') return false;
   const stored = localStorage.getItem('api_mode') as 'mock' | 'real' | null;
   const defaultMode: 'mock' | 'real' = APP_ENV === 'production' ? 'real' : 'mock';
@@ -134,12 +136,18 @@ export const apiClient = new ApiClient(API_BASE_URL);
 
 // Export mode toggle functions
 export const setApiMode = (mode: 'mock' | 'real') => {
+  if (FORCE_MOCK_MODE) return; // Cannot change mode when forced
   localStorage.setItem('api_mode', mode);
   // No reload needed - components will re-check mode on next API call
 };
 
 export const getApiMode = (): 'mock' | 'real' => {
+  if (FORCE_MOCK_MODE) return 'mock';
   const stored = localStorage.getItem('api_mode') as 'mock' | 'real' | null;
   const defaultMode: 'mock' | 'real' = APP_ENV === 'production' ? 'real' : 'mock';
   return stored || defaultMode;
+};
+
+export const isApiModeForced = (): boolean => {
+  return FORCE_MOCK_MODE;
 };

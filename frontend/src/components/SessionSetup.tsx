@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ParticipantConfig, Provider, Role, StartSessionRequest } from '@/types/api.types';
 import { Trash2, Plus, Info, Server, Cpu, ChevronDown, ChevronRight } from 'lucide-react';
-import { getApiMode, setApiMode } from '@/services/api';
+import { getApiMode, setApiMode, isApiModeForced } from '@/services/api';
 import Footer from './Footer';
 import SessionList from './SessionList';
 import {
@@ -33,13 +33,21 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
   const [apiMode, setCurrentApiMode] = useState<'mock' | 'real'>(getApiMode());
   const [showPreviousSessions, setShowPreviousSessions] = useState(false);
   const [showNewExperiment, setShowNewExperiment] = useState(false);
+  const [isModeForced] = useState(isApiModeForced());
   const actionLocked = isLoading || isStarting;
 
   useEffect(() => {
     setCurrentApiMode(getApiMode());
   }, []);
 
+  useEffect(() => {
+    if (apiMode === 'mock' && showPreviousSessions) {
+      setShowPreviousSessions(false);
+    }
+  }, [apiMode, showPreviousSessions]);
+
   const handleApiModeToggle = () => {
+    if (isModeForced) return;
     const newMode = apiMode === 'mock' ? 'real' : 'mock';
     setApiMode(newMode);
     setCurrentApiMode(newMode);
@@ -124,27 +132,38 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
             </p>
           </div>
           
-          <button
-            onClick={handleApiModeToggle}
-            className={`flex items-center gap-2 px-4 py-2 border-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
-              apiMode === 'mock'
-                ? 'border-system text-system-glow bg-system/10'
-                : 'border-communicator text-communicator-glow bg-communicator/10'
-            }`}
-            disabled={actionLocked}
-          >
-            {apiMode === 'mock' ? (
-              <>
-                <Cpu size={16} className="animate-pulse" />
-                <span className="text-xs uppercase font-bold">MOCK MODE</span>
-              </>
-            ) : (
-              <>
-                <Server size={16} />
-                <span className="text-xs uppercase font-bold">LIVE API</span>
-              </>
-            )}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleApiModeToggle}
+                className={`flex items-center gap-2 px-4 py-2 border-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+                  apiMode === 'mock'
+                    ? 'border-system text-system-glow bg-system/10'
+                    : 'border-communicator text-communicator-glow bg-communicator/10'
+                }`}
+                disabled={actionLocked || isModeForced}
+              >
+                {apiMode === 'mock' ? (
+                  <>
+                    <Cpu size={16} className="animate-pulse" />
+                    <span className="text-xs uppercase font-bold">MOCK MODE</span>
+                  </>
+                ) : (
+                  <>
+                    <Server size={16} />
+                    <span className="text-xs uppercase font-bold">LIVE API</span>
+                  </>
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-xs max-w-xs">
+                {isModeForced
+                  ? 'Application is currently locked to mock mode for demonstration purposes.'
+                  : 'Use this toggle to switch between live API calls and local mock responses.'}
+              </p>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         <div className="border-t border-primary mb-6"></div>
@@ -152,9 +171,9 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
         {/* Previous Sessions Section */}
         <div className="mb-8">
           <button
-            onClick={() => !actionLocked && setShowPreviousSessions(!showPreviousSessions)}
+            onClick={() => !actionLocked && apiMode !== 'mock' && setShowPreviousSessions(!showPreviousSessions)}
             className="w-full flex items-center justify-between p-4 border-2 border-receiver bg-terminal-bg-light hover:bg-receiver/10 transition-all mb-4 disabled:opacity-60 disabled:cursor-not-allowed"
-            disabled={actionLocked}
+            disabled={actionLocked || apiMode === 'mock'}
           >
             <div className="flex items-center gap-3">
               {showPreviousSessions ? (
@@ -167,7 +186,11 @@ export default function SessionSetup({ onSessionStart, onResumeSession, onError,
               </h2>
             </div>
             <span className="text-xs text-receiver-glow uppercase tracking-wider">
-              {showPreviousSessions ? '[COLLAPSE]' : '[EXPAND]'}
+              {apiMode === 'mock'
+                ? '[DISABLED IN MOCK MODE]'
+                : showPreviousSessions
+                ? '[COLLAPSE]'
+                : '[EXPAND]'}
             </span>
           </button>
           {showPreviousSessions && (
